@@ -69,4 +69,44 @@ class MapManager:
     def add_map(self, map_name, level):
         self.maps[map_name] = level
 
-       
+class EnvironmentalSetBuilder:
+    TILE_2_BIN = [0.,0.,1.,1.,1.,1.,1.,1.,1.,1.,1.,1.,1.,0.,0.]
+
+    def __init__(self, level) :
+        self.source = level
+        self.emap = np.zeros(level.level_data.shape)
+        self.refresh_map()
+
+    def refresh_map(self):
+        level = self.source
+        if (self.emap.shape[0] != level.num_cols) :
+            self.emap = np.zeros(level.level_data.shape)
+        for col in range(0, level.num_cols):
+            for row in range(0, 14):
+                self.emap[col][row] = EnvironmentalSetBuilder.TILE_2_BIN[
+                        int(level.level_data[col][row])]
+
+    def get_bin_level_slice(self, col, num_cols):
+        slce = np.zeros((14*num_cols))
+        indx = 0
+        for x in range(col, col+num_cols):
+            for y in range(0,14):
+                tile = int(self.emap[x,y])
+                slce[indx] = tile
+                indx += 1
+        return slce
+
+    def print_bin_level_slice(self, slce = None):
+        if slce is None:
+            slce = self.get_bin_level_slice(0, self.emap.shape[0])
+        cols = slce.shape[0] // 14
+        for x in range (0,cols):
+            for y in range (0,14):
+                tile = slce[x*14+13-y]
+                if (tile > .5):
+                    print('X', end='')
+                else:
+                    print('-', end='')
+            print()
+    
+        
