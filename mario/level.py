@@ -50,4 +50,23 @@ class Level:
         if verbose:
             print(s)
         return s
+
+
+class MapManager:
+    def __init__(self):
+        self.maps = {}
+        self.enironment_maps = {}
         
+    def get_map(self, map_name):
+        if map_name in self.maps:
+            return self.maps[map_name]
+        else:
+            newmap = Level()
+            newmap.load_level(map_name)
+            self.maps[map_name] = newmap
+            return newmap
+    
+    def add_map(self, map_name, level):
+        self.maps[map_name] = level
+
+       
