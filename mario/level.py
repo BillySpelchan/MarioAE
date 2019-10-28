@@ -52,22 +52,7 @@ class Level:
         return s
 
 
-class MapManager:
-    def __init__(self):
-        self.maps = {}
-        self.enironment_maps = {}
-        
-    def get_map(self, map_name):
-        if map_name in self.maps:
-            return self.maps[map_name]
-        else:
-            newmap = Level()
-            newmap.load_level(map_name)
-            self.maps[map_name] = newmap
-            return newmap
-    
-    def add_map(self, map_name, level):
-        self.maps[map_name] = level
+
 
 class EnvironmentalSetBuilder:
     TILE_2_BIN = [0.,0.,1.,1.,1.,1.,1.,1.,1.,1.,1.,1.,1.,0.,0.]
@@ -109,4 +94,51 @@ class EnvironmentalSetBuilder:
                     print('-', end='')
             print()
     
+  
+class MapManager:
+    def __init__(self):
+        self.maps = {}
+        self.enironment_maps = {}
         
+    def get_map(self, map_name):
+        if map_name in self.maps:
+            return self.maps[map_name]
+        else:
+            newmap = Level()
+            newmap.load_level(map_name)
+            self.maps[map_name] = newmap
+            return newmap
+    
+    def add_map(self, map_name, level):
+        self.maps[map_name] = level
+        
+    def load_and_slice_level(self, map_name, num_col_in_slice, overlap_slices, verbose=False):
+        level = self.get_map(map_name)
+        lvl = level.level_data
+        slice_skip =  1 if overlap_slices else num_col_in_slice
+        cols = lvl.shape[0]
+        emap = EnvironmentalSetBuilder(level)
+        slc = emap.get_bin_level_slice(0, num_col_in_slice)
+        slices = slc.reshape((1,14*num_col_in_slice))
+        if verbose:
+            emap.print_bin_level_slice(slices[0])
+        slice_col = slice_skip
+        while (slice_col + num_col_in_slice) <= cols:
+            slc = emap.get_bin_level_slice(slice_col, num_col_in_slice)
+            if verbose:
+                emap.print_bin_level_slice(slc)
+            slices = np.append(slices, slc.reshape((1,14*num_col_in_slice)), axis=0)
+            slice_col += slice_skip
+        return slices
+            
+    def load_and_slice_levels(self, level_set, num_col_in_slice, overlap_slices, verbose=False):
+        slices = None
+        for name in level_set:
+            if verbose:
+                print("Loading and processing level ", name)
+            slc = self.load_and_slice_level(name, num_col_in_slice, overlap_slices, verbose)
+            if slices is None:
+                slices = slc
+            else:
+                slices = np.append(slices, slc, axis=0)
+        return slices
