@@ -4,6 +4,7 @@
 @author: Billy D. Spelchan
 """
 import numpy as np
+import random
 
 class Level:
     TILE_EMPTY = 0
@@ -81,20 +82,78 @@ class EnvironmentalSetBuilder:
                 indx += 1
         return slce
 
+    def add_noise_to_slice(self, slce, noise_rate):
+        noisy_slice = np.zeros(slce.shape)
+        for indx in range(slce.shape[0]):
+            rnd = random.random()
+            if rnd < noise_rate:
+                if (slce[indx] < 0.5):
+                    noisy_slice[indx] = 1.0
+                else:
+                    noisy_slice[indx] = 0
+            else:
+                noisy_slice[indx] = slce[indx]
+        return noisy_slice
+
+
+    def bin_level_slice_to_string(self, slc):
+        cols = slc.shape[0] // 14
+        s = ""
+        for x in range (0,cols):
+            for y in range (0,14):
+                tile = slc[x*14+13-y]
+                if (tile > .5):
+                    s += 'X'
+                else:
+                    s += '-'
+            s += '\n'
+        return s
+
     def print_bin_level_slice(self, slce = None):
         if slce is None:
             slce = self.get_bin_level_slice(0, self.emap.shape[0])
-        cols = slce.shape[0] // 14
-        for x in range (0,cols):
-            for y in range (0,14):
-                tile = slce[x*14+13-y]
-                if (tile > .5):
-                    print('X', end='')
+        s = self.bin_level_slice_to_string(slce)            
+        print(s)
+
+    # COMPARISON OF SLICES
+
+    """
+        compares slices returning a np byte matrix with 
+            0 = both match with empty
+            1 = both match with wall
+            2 = should be empty but is wall
+            3 = should be wall but is empty
+    """
+    def compare_slices(self, original, derived):
+        results = np.zeros(original.shape, dtype=np.int8)
+        for indx in range(original.shape[0]):
+            originalIsWall = original[indx] > .5
+            derivedIsWall = derived[indx] > .5
+            if originalIsWall:
+                if derivedIsWall:
+                    results[indx] = 1
                 else:
-                    print('-', end='')
-            print()
-    
+                    results[indx] = 2
+            else:
+                if derivedIsWall:
+                    results[indx] = 3
+                else:
+                    results[indx] = 0
+        return results
   
+    def compare_slice_to_col_string(self, original, derived):
+        COMP_LETTERS = "-XOH"
+        orig_strs = self.bin_level_slice_to_string(original).split('\n')
+        der_strs = self.bin_level_slice_to_string(derived).split('\n')
+        comp = self.compare_slices(original, derived)
+        indx = 0
+        for col in range(len(orig_strs)-1):
+            print(orig_strs[col], " | ", der_strs[col], ' | ', end='')
+            for row in range(14):
+                print(COMP_LETTERS[comp[indx+13-row]], end='')
+            indx += 14
+            print()
+            
 class MapManager:
     def __init__(self):
         self.maps = {}

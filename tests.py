@@ -26,5 +26,14 @@ for col in range(150):
 emap = EnvironmentalSetBuilder(level)
 emap.print_bin_level_slice()
 
-test_list = mapman.load_and_slice_levels(LEVELS_IN_SET, 4, True, True)
-print ("Test data loaded")
+sub_map = emap.get_bin_level_slice(50,8)
+noisy_map = emap.add_noise_to_slice(sub_map, 0.05)
+print ("slice without noise")
+emap.print_bin_level_slice(sub_map)
+print ("slice with noise")
+emap.print_bin_level_slice(noisy_map)
+
+emap.compare_slice_to_col_string(sub_map, noisy_map)
+#test_list = mapman.load_and_slice_levels(LEVELS_IN_SET, 4, True, False)
+#print ("Test data loaded")
+
