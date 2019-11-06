@@ -6,6 +6,7 @@ Created on Sat Oct 26 13:39:51 2019
 """
 
 from mario.level import Level, EnvironmentalSetBuilder, MapManager
+from mario.model import MarioModel
 
 LEVELS_IN_SET=[
     "levels/mario-1-1.txt", "levels/mario-1-2.txt", "levels/mario-1-3.txt",
@@ -34,6 +35,15 @@ print ("slice with noise")
 emap.print_bin_level_slice(noisy_map)
 
 emap.compare_slice_to_col_string(sub_map, noisy_map)
-#test_list = mapman.load_and_slice_levels(LEVELS_IN_SET, 4, True, False)
-#print ("Test data loaded")
 
+
+# model testing
+test_list = mapman.load_and_slice_levels(LEVELS_IN_SET, 4, True, False)
+print ("Test data loaded")
+
+model = MarioModel()
+model.train_model(test_list, 100)
+for i in range(25):
+    prediction = model.predict_slice(test_list[i*4+50])
+    emap.compare_slice_to_col_string(test_list[i*4+50], prediction[0])
+model.save()
