@@ -60,11 +60,15 @@ class EnvironmentalSetBuilder:
 
     def __init__(self, level) :
         self.source = level
-        self.emap = np.zeros(level.level_data.shape)
-        self.refresh_map()
+        if level is None:
+            self.emap = np.zeros((4,14))
+        else:
+            self.emap = np.zeros(level.level_data.shape)
+            self.refresh_map()
 
     def refresh_map(self):
         level = self.source
+        if level is None: return
         if (self.emap.shape[0] != level.num_cols) :
             self.emap = np.zeros(level.level_data.shape)
         for col in range(0, level.num_cols):

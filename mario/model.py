@@ -8,6 +8,7 @@ import numpy as np
 
 from keras.layers import Input, Dense
 from keras.models import Model
+from keras.models import load_model
 
 class MarioModel:
     def __init__(self):
