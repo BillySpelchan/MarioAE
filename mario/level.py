@@ -52,7 +52,18 @@ class Level:
             print(s)
         return s
 
+    def add_column(self, column_array):
+        if self.level_data is None:
+            self.level_data = column_array.reshape((1,14))
+            self.num_cols = 1
+        else:
+            self.level_data = np.append(self.level_data, column_array.reshape((1,14)), axis=0)
+            self.num_cols = self.level_data.shape[0]
+            print ("debug shape ", self.level_data.shape)
 
+    def print_map(self):
+        for col in range(self.level_data.shape[0]):
+            self.column_to_string(col, True)
 
 
 class EnvironmentalSetBuilder:
@@ -62,6 +73,8 @@ class EnvironmentalSetBuilder:
         self.source = level
         if level is None:
             self.emap = np.zeros((4,14))
+            for col in range(4):
+                self.emap[col, 13] = 1
         else:
             self.emap = np.zeros(level.level_data.shape)
             self.refresh_map()
@@ -76,6 +89,10 @@ class EnvironmentalSetBuilder:
                 self.emap[col][row] = EnvironmentalSetBuilder.TILE_2_BIN[
                         int(level.level_data[col][row])]
 
+    def add_slice_to_map(self, slc):
+        cols_in_slice = slc.shape[0]//14
+        self.emap = np.append(self.emap, slc.reshape((cols_in_slice,14)), axis=0)
+        
     def get_bin_level_slice(self, col, num_cols):
         slce = np.zeros((14*num_cols))
         indx = 0
@@ -157,6 +174,18 @@ class EnvironmentalSetBuilder:
                 print(COMP_LETTERS[comp[indx+13-row]], end='')
             indx += 14
             print()
+    
+    def convert_to_level(self):
+        lvl = Level()
+        print ("Converting level of size ", self.emap.shape[0])
+        for col in range(self.emap.shape[0]):
+            temp = np.zeros((14))
+            for row in range(14):
+                if self.emap[col,row] > .5:
+                    temp[row] = Level.TILE_BRICK
+            lvl.add_column(temp)
+        lvl.print_map()
+        return lvl
             
 class MapManager:
     def __init__(self):
