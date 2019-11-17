@@ -10,7 +10,7 @@ from mario.level import Level, EnvironmentalSetBuilder, MapManager
 from mario.model import MarioModel
 
 class ColumnPredictor:
-    def __init__(self, manager, level_list):
+    def __init__(self, manager, level_list, verbose=True):
         self.overall_chance_solid = np.zeros((14))
         self.follow_empty_chance_solid = np.zeros((14))
         self.follow_solid_chance_solid = np.zeros((14))
@@ -19,7 +19,8 @@ class ColumnPredictor:
         
         slices = manager.load_and_slice_levels(level_list, 1, False)
         num_cols = slices.shape[0];
-        print("debug column predictor columns ", num_cols)
+        if verbose:
+            print("debug column predictor columns ", num_cols)
         prev_slc = slices[0]
         for slc in slices:
             print(slc)
@@ -34,21 +35,23 @@ class ColumnPredictor:
                 else:
                     follow_empty_count[row] += 1
             prev_slc = slc
-            
-        print("overall chance solid raw count ", self.overall_chance_solid)
-        print("follow empty chance solid raw count ", self.follow_empty_chance_solid)
-        print("follow empty count ", follow_empty_count)
-        print("follow solid chance solid raw count ", self.follow_solid_chance_solid)
-        print("folow solid count ", follow_solid_count)
+        
+        if verbose:
+            print("overall chance solid raw count ", self.overall_chance_solid)
+            print("follow empty chance solid raw count ", self.follow_empty_chance_solid)
+            print("follow empty count ", follow_empty_count)
+            print("follow solid chance solid raw count ", self.follow_solid_chance_solid)
+            print("folow solid count ", follow_solid_count)
         for row in range(14):
             self.overall_chance_solid[row] = self.overall_chance_solid[row]/num_cols
             if follow_empty_count[row] > 0:
                 self.follow_empty_chance_solid[row] = self.follow_empty_chance_solid[row] / follow_empty_count[row]
             if follow_solid_count[row] > 0:
                 self.follow_solid_chance_solid[row] = self.follow_solid_chance_solid[row] / follow_solid_count[row]
-        print("overall chance solid ", self.overall_chance_solid)
-        print("follow empty chance solid ", self.follow_empty_chance_solid)
-        print("follow solid chance solid ", self.follow_solid_chance_solid)
+        if verbose:
+            print("overall chance solid ", self.overall_chance_solid)
+            print("follow empty chance solid ", self.follow_empty_chance_solid)
+            print("follow solid chance solid ", self.follow_solid_chance_solid)
 
 
     def buildSlice(self, prev_slice):
@@ -106,11 +109,90 @@ class Generator:
         return generated        
 
 
+class ValidateMap:
+    ACTION_NONE = 0
+    ACTION_MOVING = 1
+    ACTION_JUMP1 = 2
+    ACTION_JUMP2 = 4
+    ACTION_JUMP3 = 8
+    ACTION_FALLING = 16
+
+    def __init__(self):
+        self.todo = True
+        #nothing
+    
+    def build_path_slice(self, emap_slice, prev_emap_slice=None, prev_path_slice=None):
+        results = np.zeros((14), dtype=np.int8)
+        if prev_emap_slice is None:
+            # create a starting path slice
+            highest_platform = 0
+            for row in range(1,14):
+                if emap_slice[row] > .5:
+                    highest_platform = row
+                    break
+            if highest_platform == 0:
+                for row in range(13):
+                    results[row] = ValidateMap.ACTION_FALLING
+            else:
+                results[highest_platform-1] = ValidateMap.ACTION_MOVING
+        else:
+            #proper slice
+            freefall = False
+            for row in range (13): # bottom row is death so ...
+                if emap_slice[row] < .5: # if player can enter tile
+                    state = 0
+                    if (prev_path_slice[row] & 1) == 1:
+                        if emap_slice[row+1] < .5:
+                            freefall = True
+                    t = prev_path_slice[row+1]
+                    if (t & 1) == 1: state = state | 2
+                    if (t & 2) == 2: state = state | 4
+                    if (t & 4) == 4: state = state | 8
+                    if (t & 8) == 8: freefall = True
+                    if (row < 12):
+                        t= prev_path_slice[row+2]
+                        if (t & 1) == 1: state = state | 4
+                        if (t & 2) == 2: state = state | 8
+                        if (t & 4) == 4: freefall = True
+                    if (row < 11):
+                        t= prev_path_slice[row+3]
+                        if (t & 1) == 1: state = state | 8
+                        if (t & 2) == 2: freefall = True
+                    if (row < 10):
+                        t= prev_path_slice[row+3]
+                        if (t & 1) == 1: freefall = True
+                    if (row > 0):
+                        t= prev_path_slice[row-1]
+                        if t>0: freefall = True
+                    if (freefall): 
+                        if (emap_slice[row+1] > .5):
+                            state = state | 1
+                            freefall = False
+                        else:
+                            state = state | 16
+                    results[row] = state
+        print(results)
+        return results
+
+    def check_map(self, emap):
+        prev_slice = emap.get_bin_level_slice(1, 1)
+        prev_path = self.build_path_slice(prev_slice, None)
+        for col in range (1, emap.emap.shape[0]):
+            slc = emap.get_bin_level_slice(col, 1)
+#            print('*',slc)
+            prev_path = self.build_path_slice(slc, prev_slice, prev_path)
+            prev_slice = slc
+            
+
 if __name__ == "__main__":
     mapman = MapManager()
-    level = mapman.get_map("levels/broken.txt")
+    level = mapman.get_map("levels/mario-1-1.txt")
     emap = EnvironmentalSetBuilder(level)
 
+    validate = ValidateMap()
+    validate.check_map(emap)
+    
+"""
     test_list = mapman.load_and_slice_levels([
         "levels/mario-1-1.txt", "levels/mario-1-2.txt", "levels/mario-1-3.txt",
         "levels/mario-2-1.txt",
@@ -127,8 +209,9 @@ if __name__ == "__main__":
     gmap = gen.rolling_generator(test_list, .05)
 #    slc.print_bin_level_slice()
     lvl = gmap.convert_to_level()
-    
-    """
+"""    
+   
+"""
     cp = ColumnPredictor(mapman, [
         "levels/mario-1-1.txt", "levels/mario-1-2.txt", "levels/mario-1-3.txt",
         "levels/mario-2-1.txt",
@@ -142,4 +225,4 @@ if __name__ == "__main__":
     cp.generate(50)
     print("LEVEL WITH PREV KNOWLEDGE")
     cp.generate(50, True)
-    """
+"""
