@@ -67,13 +67,16 @@ class ColumnPredictor:
         return result
 
     def generate(self, cols, use_prev=False):
+        emap = EnvironmentalSetBuilder(None)
         prev = self.buildSlice(None)
         for col in range(cols):
             if (use_prev):
                 prev = self.buildSlice(prev)
             else:
                 prev = self.buildSlice(None)
-            print(prev)
+            #print(prev)
+            emap.add_slice_to_map(prev)
+        return emap
                 
 
 class Generator:
@@ -105,7 +108,9 @@ class Generator:
             slc = emap.add_noise_to_slice(slc, noise)
             gslc = model.predict_slice(slc)
             generated.add_slice_to_map(gslc[0,0:14])
-            np.roll(slc, 14)
+            #print(slc)
+            slc = np.roll(slc, -14)
+            #print("<<", slc)
         return generated        
 
 
@@ -118,8 +123,12 @@ class ValidateMap:
     ACTION_FALLING = 16
 
     def __init__(self):
-        self.todo = True
-        #nothing
+        self.current_emap = None
+        self.current_pathmap = None
+        self.last_empty_pct = 0
+        self.last_reachable_pct = 0
+        self.last_potential_jump_count = 0
+        self.last_required_jumps = 0
     
     def build_path_slice(self, emap_slice, prev_emap_slice=None, prev_path_slice=None):
         results = np.zeros((14), dtype=np.int8)
@@ -171,27 +180,176 @@ class ValidateMap:
                         else:
                             state = state | 16
                     results[row] = state
-        print(results)
+        #print(results)
         return results
 
-    def check_map(self, emap):
-        prev_slice = emap.get_bin_level_slice(1, 1)
+
+    def create_pathmap(self, emap, verbose = False):
+        self.current_emap = emap
+        prev_slice = self.current_emap.get_bin_level_slice(1, 1)
         prev_path = self.build_path_slice(prev_slice, None)
-        for col in range (1, emap.emap.shape[0]):
-            slc = emap.get_bin_level_slice(col, 1)
-#            print('*',slc)
+        self.current_pathmap = np.copy(prev_path).reshape((1,14))
+        for col in range (2, emap.emap.shape[0]):
+            slc = self.current_emap.get_bin_level_slice(col, 1)
             prev_path = self.build_path_slice(slc, prev_slice, prev_path)
             prev_slice = slc
-            
+            self.current_pathmap = np.append(self.current_pathmap, prev_path.reshape((1,14)), axis=0)
+            if verbose:
+                print(prev_path)
+        return self.current_pathmap
+    
 
+    def is_completable(self, emap = None):
+        if emap is None:
+            pathmap = self.current_pathmap
+        else:
+            pathmap = self.create_pathmap(emap)
+        last_col = pathmap.shape[0] - 1
+        completable = False
+        for row in range(14):
+            if (pathmap[last_col, row] > 0):
+                completable = True
+                break
+        return completable
+    
+    def percent_empty_tiles(self, emap = None):
+        if emap is not None:
+            tmap = emap.emap
+        else:
+            tmap = self.current_emap.emap
+        map_cols = tmap.shape[0]
+        count = map_cols * 14
+        empty = 0
+        for col in range(map_cols):
+            for row in range(14):
+                if tmap[col,row] < .5:
+                    empty += 1
+        result = empty / count
+        self.last_empty_pct = result
+        print (empty,"/",count,"=",result)
+        return result
+    
+    def percent_reachable_tiles(self, emap = None):
+        if emap is None:
+            pathmap = self.current_pathmap
+        else:
+            pathmap = self.create_pathmap(emap)
+        reachable_count = 0
+        for col in range(0, pathmap.shape[0]): 
+            for row in range (0,13):
+                if (pathmap[col,row] > 0):
+                   reachable_count += 1
+        self.last_reachable_pct = reachable_count / (pathmap.shape[0] * 14)
+        return self.last_reachable_pct
+
+    def number_of_potential_jumps(self, emap = None):
+        if emap is None:
+            pathmap = self.current_pathmap
+        else:
+            pathmap = self.create_pathmap(emap)
+        potential_jump_count = 0
+        for col in range(0, pathmap.shape[0]): 
+            for row in range (0,13):
+                if (pathmap[col,row] & 1) == 1:
+                   potential_jump_count += 1
+        self.last_potential_jump_count = potential_jump_count
+        return potential_jump_count
+
+    
+    def number_of_required_jumps(self, emap = None):
+        if emap is None:
+            pathmap = self.current_pathmap
+        else:
+            pathmap = self.create_pathmap(emap)
+        required_jump_count = 0
+        for col in range(0, pathmap.shape[0]-1):
+            for row in range (0,13):
+                if (pathmap[col,row] & 1) == 1:
+                    if (pathmap[col+1,row] & 1) != 1:
+                        required_jump_count += 1
+        self.last_required_jumps = required_jump_count
+        return required_jump_count
+
+
+    def print_test_results(self, emap):
+        print ("Completable: ", self.is_completable(emap))
+        print ("Empty tiles: ", self.percent_empty_tiles())
+        print ("Reachable Tiles: ", self.percent_reachable_tiles())
+        print ("Number of potential jumps: ", self.number_of_potential_jumps())
+        print ("Number of required jumps: ", self.number_of_required_jumps())
+
+
+    def write_test_results_to_csv(self, csv_filename, emap = None):
+        f = open(csv_filename, "a+")
+        if self.is_completable(emap):
+            f.write('1,')
+        else:
+            f.write('0,')
+        f.write(str(self.percent_empty_tiles()))
+        f.write(',')
+        f.write (str(self.percent_reachable_tiles()))
+        f.write(',')
+        f.write (str(self.number_of_potential_jumps()))
+        f.write(',')
+        f.write (str( self.number_of_required_jumps()))
+        f.write('\n')
+        f.close()
+
+
+def validateSMB(mapman):
+    validate = ValidateMap()
+    validate.print_test_results(emap)
+    smb_levels =     [
+        "levels/mario-1-1.txt", "levels/mario-1-2.txt", "levels/mario-1-3.txt",
+        "levels/mario-2-1.txt",
+        "levels/mario-3-1.txt", "levels/mario-3-3.txt",
+        "levels/mario-4-1.txt", "levels/mario-4-2.txt",
+        "levels/mario-5-1.txt", "levels/mario-5-3.txt",
+        "levels/mario-6-1.txt", "levels/mario-6-2.txt", "levels/mario-6-3.txt",
+        "levels/mario-7-1.txt",
+        "levels/mario-8-1.txt"]
+    for lvl in smb_levels:
+        level = mapman.get_map(lvl)
+        emap = EnvironmentalSetBuilder(level)
+        validate.print_test_results(emap)
+        validate.write_test_results_to_csv("smb.csv", emap)
+    
 if __name__ == "__main__":
     mapman = MapManager()
-    level = mapman.get_map("levels/mario-1-1.txt")
+    #level = mapman.get_map("levels/mario-1-1.txt")
+    level = mapman.get_map("levels/broken.txt")
     emap = EnvironmentalSetBuilder(level)
 
-    validate = ValidateMap()
-    validate.check_map(emap)
+    mario_level_set = [
+        "levels/mario-1-1.txt", "levels/mario-1-2.txt", "levels/mario-1-3.txt",
+        "levels/mario-2-1.txt",
+        "levels/mario-3-1.txt", "levels/mario-3-3.txt",
+        "levels/mario-4-1.txt", "levels/mario-4-2.txt",
+        "levels/mario-5-1.txt", "levels/mario-5-3.txt",
+        "levels/mario-6-1.txt", "levels/mario-6-2.txt", "levels/mario-6-3.txt",
+        "levels/mario-7-1.txt",
+        "levels/mario-8-1.txt"]
+
+    cp = ColumnPredictor(mapman, mario_level_set)
+    test_list = mapman.load_and_slice_levels(mario_level_set, 4, True, False)
+
+    validator = ValidateMap()
+    model = MarioModel()
+    model.load()
+
+    gen = Generator(model)
     
+    completable = 0
+    for n in range(100):
+        print ("generating ", n)
+        #emap = gen.generate(test_list)
+        emap = gen.rolling_generator(test_list)
+        #validator.create_pathmap(emap, True)
+        if validator.is_completable(emap):
+            completable += 1
+    print ("Completable percent", completable)
+
+        
 """
     test_list = mapman.load_and_slice_levels([
         "levels/mario-1-1.txt", "levels/mario-1-2.txt", "levels/mario-1-3.txt",

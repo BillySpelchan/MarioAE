@@ -9,12 +9,14 @@ from mario.level import Level, EnvironmentalSetBuilder, MapManager
 from mario.model import MarioModel
 
 LEVELS_IN_SET=[
-    "levels/mario-1-1.txt", "levels/mario-1-2.txt", "levels/mario-1-3.txt",
+    #"levels/mario-1-1.txt", 
+    "levels/mario-1-2.txt", "levels/mario-1-3.txt",
     "levels/mario-2-1.txt",
     "levels/mario-3-1.txt", "levels/mario-3-3.txt",
     "levels/mario-4-1.txt", "levels/mario-4-2.txt",
     "levels/mario-5-1.txt", "levels/mario-5-3.txt",
-    "levels/mario-6-1.txt", "levels/mario-6-2.txt", "levels/mario-6-3.txt",
+    "levels/mario-6-1.txt", 
+    "levels/mario-6-2.txt", "levels/mario-6-3.txt",
     "levels/mario-7-1.txt",
     "levels/mario-8-1.txt"]
 
@@ -42,8 +44,25 @@ test_list = mapman.load_and_slice_levels(LEVELS_IN_SET, 4, True, False)
 print ("Test data loaded")
 
 model = MarioModel()
+#model.load()
 model.train_model(test_list, 100)
-for i in range(25):
+total_err = 0
+predict_test = mapman.load_and_slice_levels(["levels/mario-1-1.txt"], 4, True, False)
+for i in range(predict_test.shape[0]//4):
+    """
     prediction = model.predict_slice(test_list[i*4+50])
+    cslc = emap.compare_slices(test_list[i*4+50], prediction[0])
     emap.compare_slice_to_col_string(test_list[i*4+50], prediction[0])
-model.save()
+    """
+    prediction = model.predict_slice(predict_test[i*4])
+    cslc = emap.compare_slices(predict_test[i*4], prediction[0])
+    emap.compare_slice_to_col_string(predict_test[i*4], prediction[0])
+    col_err = 0
+    for row in range(56):
+        if (cslc[row] > 1):
+            col_err += 1
+    print(col_err)
+    total_err += col_err
+print ("errors: ", total_err, "out of ", (predict_test.shape[0]*14))
+        
+#model.save()
