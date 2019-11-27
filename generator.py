@@ -113,7 +113,66 @@ class Generator:
             #print("<<", slc)
         return generated        
 
+    def rolling_generator_mid(self, reference_set, noise = .01, cols=100):
+        slc = np.copy(reference_set[0])
+        generated = EnvironmentalSetBuilder(None)
+        for chunk in range(cols):
+            for i in range(14):
+                src = reference_set[random.randrange(reference_set.shape[0])]
+                slc[42+i] = src[42+i]
+            slc = emap.add_noise_to_slice(slc, noise)
+            gslc = model.predict_slice(slc)
+            generated.add_slice_to_map(gslc[0,14:28])
+            #print(slc)
+            slc = np.roll(slc, -14)
+            #print("<<", slc)
+        return generated        
 
+    def generate_with_prev(self, cp, noise = .01, cols=100):
+        generated = EnvironmentalSetBuilder(None)
+        prev = cp.buildSlice(None)
+        for chunk in range(cols//4):
+            prev = cp.buildSlice(prev)
+            slc = np.copy(prev)
+            for i in range(3):
+                prev = cp.buildSlice(prev)
+                slc = np.append(slc, prev)
+            slc = generated.add_noise_to_slice(slc, noise)
+            gslc = model.predict_slice(slc)
+            emap.compare_slice_to_col_string(slc, gslc[0])
+            generated.add_slice_to_map(gslc[0,:])
+        return generated
+
+    def rolling_prev_generator(self, cp, noise = .01, cols=100):
+        generated = EnvironmentalSetBuilder(None)
+        slc = np.zeros(56)
+        slc[13] = slc[27] = slc[41] = slc[55] = 1;
+        prev = np.copy(slc[0:14])
+        for chunk in range(cols):
+            prev = cp.buildSlice(prev)
+            for i in range(14):
+                slc[42+i] = prev[i]
+            slc = emap.add_noise_to_slice(slc, noise)
+            gslc = model.predict_slice(slc)
+            generated.add_slice_to_map(gslc[0,0:14])
+            slc = np.roll(slc, -14)
+        return generated        
+
+    def rolling_mid_prev_generator(self, cp, noise = .01, cols=100):
+        generated = EnvironmentalSetBuilder(None)
+        slc = np.zeros(56)
+        slc[13] = slc[27] = slc[41] = slc[55] = 1;
+        prev = np.copy(slc[0:14])
+        for chunk in range(cols):
+            prev = cp.buildSlice(prev)
+            for i in range(14):
+                slc[42+i] = prev[i]
+            slc = emap.add_noise_to_slice(slc, noise)
+            gslc = model.predict_slice(slc)
+            generated.add_slice_to_map(gslc[0,14:28])
+            slc = np.roll(slc, -14)
+        return generated        
+     
 class ValidateMap:
     ACTION_NONE = 0
     ACTION_MOVING = 1
@@ -313,7 +372,72 @@ def validateSMB(mapman):
         emap = EnvironmentalSetBuilder(level)
         validate.print_test_results(emap)
         validate.write_test_results_to_csv("smb.csv", emap)
+ 
+def test_original_generators(mapman, test_list):
+    validator = ValidateMap()
+    model = MarioModel()
+    model.load()
+
+    gen = Generator(model)
     
+    completable = 0
+    for n in range(1000):
+        print ("generating ", n)
+        emap = gen.generate(test_list)
+        #validator.create_pathmap(emap, True)
+        if validator.is_completable(emap):
+            completable += 1
+        validator.write_test_results_to_csv("gen_chunk.csv")
+    print ("Completable percent", completable)
+    completable = 0
+    for n in range(1000):
+        print ("generating ", n)
+        emap = gen.rolling_generator(test_list)
+        #validator.create_pathmap(emap, True)
+        if validator.is_completable(emap):
+            completable += 1
+        validator.write_test_results_to_csv("gen_rolling.csv")
+    print ("Completable percent", completable)
+    completable = 0
+    for n in range(1000):
+        print ("generating ", n)
+        #emap = gen.generate(test_list)
+        emap = gen.rolling_generator_mid(test_list)
+        #validator.create_pathmap(emap, True)
+        if validator.is_completable(emap):
+            completable += 1
+        validator.write_test_results_to_csv("gen_rolling_mid.csv")
+    print ("Completable percent", completable)
+
+    
+def test_prev_generators(mapman, cp):
+    #test_original_generators(mapman, test_list)
+    validator = ValidateMap()
+    model = MarioModel()
+    model.load()
+
+    gen = Generator(model)
+    
+    completable = 0
+    for n in range(1000):
+        print ("generating ", n)
+        emap = gen.generate_with_prev(cp)
+        if validator.is_completable(emap):
+            completable += 1
+        validator.write_test_results_to_csv("gen_prev_chunk.csv")
+    print ("Completable percent", completable)
+
+    completable = 0
+    for n in range(1000):
+        print ("generating ", n)
+        emap = gen.rolling_prev_generator(cp)
+        if validator.is_completable(emap):
+            completable += 1
+ #       validator.create_pathmap(emap,True)
+        validator.write_test_results_to_csv("gen_prev_rolling.csv")
+    print ("Completable percent", completable)
+
+
 if __name__ == "__main__":
     mapman = MapManager()
     #level = mapman.get_map("levels/mario-1-1.txt")
@@ -333,6 +457,8 @@ if __name__ == "__main__":
     cp = ColumnPredictor(mapman, mario_level_set)
     test_list = mapman.load_and_slice_levels(mario_level_set, 4, True, False)
 
+    
+    #test_original_generators(mapman, test_list)
     validator = ValidateMap()
     model = MarioModel()
     model.load()
@@ -340,16 +466,15 @@ if __name__ == "__main__":
     gen = Generator(model)
     
     completable = 0
-    for n in range(100):
+    for n in range(1000):
         print ("generating ", n)
-        #emap = gen.generate(test_list)
-        emap = gen.rolling_generator(test_list)
-        #validator.create_pathmap(emap, True)
+        emap = gen.rolling_mid_prev_generator(cp)
         if validator.is_completable(emap):
             completable += 1
+ #       validator.create_pathmap(emap,True)
+        validator.write_test_results_to_csv("gen_prev_rolling_mid.csv")
     print ("Completable percent", completable)
 
-        
 """
     test_list = mapman.load_and_slice_levels([
         "levels/mario-1-1.txt", "levels/mario-1-2.txt", "levels/mario-1-3.txt",

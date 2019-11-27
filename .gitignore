@@ -126,3 +126,6 @@ dmypy.json
 
 # tensorflow
 *.h5
+
+# csv data files
+*.csv
