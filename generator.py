@@ -437,6 +437,36 @@ def test_prev_generators(mapman, cp):
         validator.write_test_results_to_csv("gen_prev_rolling.csv")
     print ("Completable percent", completable)
 
+    completable = 0
+    for n in range(1000):
+        print ("generating ", n)
+        emap = gen.rolling_mid_prev_generator(cp)
+        if validator.is_completable(emap):
+            completable += 1
+ #       validator.create_pathmap(emap,True)
+        validator.write_test_results_to_csv("gen_prev_rolling_mid.csv")
+    print ("Completable percent", completable)
+
+
+from tkinter import *
+
+def draw_canvas(emap, start, cols):
+    window = Tk()
+
+    cvs = Canvas(window, width=800, height=240)
+    cvs.pack()
+    
+    colour = "green"
+    for col in range(cols):
+        for row in range(14):
+            if (emap.emap[col+start,row] > .5):
+                colour = "black"
+            else:
+                colour = "cyan"
+            #print (col, ",", row, get_char_color(comp_str[col*52+row]), ",", get_char_color(comp_str[col*52+19+row]), ",",get_char_color(comp_str[col*52+37+row]))
+#            cvs.create_rectangle(12*col, 184-12*row, 12*col+12, 184-12*row+12, fill=colour)   
+            cvs.create_rectangle(12*col, 12*row, 12*col+12, 12*row+12, fill=colour)   
+    mainloop()
 
 if __name__ == "__main__":
     mapman = MapManager()
@@ -464,17 +494,13 @@ if __name__ == "__main__":
     model.load()
 
     gen = Generator(model)
-    
-    completable = 0
-    for n in range(1000):
-        print ("generating ", n)
+    invalid = True
+    while (invalid):
         emap = gen.rolling_mid_prev_generator(cp)
         if validator.is_completable(emap):
-            completable += 1
- #       validator.create_pathmap(emap,True)
-        validator.write_test_results_to_csv("gen_prev_rolling_mid.csv")
-    print ("Completable percent", completable)
-
+            invalid = False
+    draw_canvas(emap, 1, 60)
+    
 """
     test_list = mapman.load_and_slice_levels([
         "levels/mario-1-1.txt", "levels/mario-1-2.txt", "levels/mario-1-3.txt",
