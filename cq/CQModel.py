@@ -38,12 +38,31 @@ class CQModel:
         prediction = self.model.predict(slc.reshape((1,49)), batch_size=1)
         return prediction
 
+    def clean_prediction(self, prediction = None):
+        if prediction is None:
+            prediction = self.predict_slice()
+        cleaned = np.zeros(prediction.shape[1])
+        for indx in range(prediction.shape[1]):
+            if (prediction[0,indx] > 0):
+                cleaned[indx] = 1
+        return cleaned
+        
     def save(self, saved_model_name="cq.h5"):
         self.model.save(saved_model_name)
     
     def load(self, saved_model_name="cq.h5"):
         self.model = load_model(saved_model_name)
 
+def print_slice_as_grid(slc, width, height):
+    indx = 0
+    for r in range(height):
+        for c in range(width):
+            ch = '.' if slc[indx] == 0 else '*'
+            print(ch, end='')
+            indx += 1
+        print()
+        
+    
 # TODO - Move to separte test module once stablized
 if __name__ == "__main__":
     cqmap = CQMap.CQMap()
@@ -52,6 +71,9 @@ if __name__ == "__main__":
     print(train)
     model = CQModel()
     model.create_model()
-    model.train_model(train, 100)
+    model.train_model(train, 200)
     predict = model.predict_slice(train[0])
-    print(predict)
+    print_slice_as_grid(train[0], 7,7)
+    print("---------------")
+    print_slice_as_grid(model.clean_prediction(predict), 7,7)
+
