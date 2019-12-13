@@ -4,6 +4,9 @@ Created on Mon Dec  9 19:41:49 2019
 
 @author: spelc
 """
+import numpy as np
+from PIL import Image as pimg
+
 
 class STFormatException(Exception):
     def __init__(self, message):
@@ -136,6 +139,8 @@ class STTilemap:
         if (self.name is None):
             self.name = "unnamed"
         tiles = node.get_child_by_name("tiles").payload.split(' ')
+        # have to manually go through payload to avoid non-numeric tiles
+        # as spacing is not even
         self.tiles = np.zeros((int(self.width), int(self.height)))
         col = 0
         row = 0
@@ -151,8 +156,75 @@ class STTilemap:
                 pass
         print("debug ", self.width, ",", self.height, " ? ", row, ",", col )
         
+
+class STLevel:
+    def __init__(self, filename=None):
+        self.raw_level = None
+        self.root = None
+        self.tilemaps = []
+        if (filename is not None): self.load_level(filename)
+        self.combined_solid = None
+
         
+    def load_level(self, filename):
+        f = open(filename, 'rt')
+        self.raw_level = f.read()
+        f.close()
+        self.root = STFileNode()
+        self.root.parse_from_string(self.raw_level)
+        self.tilemaps = []
+        maps = self.root.get_list_of_nodes_of_type("tilemap")
+        for tm in maps:
+            self.tilemaps.append(STTilemap(tm))
+        self.combined_solid = None
+            
+    def get_combined_solid(self):
+        if self.combined_solid is not None:
+            return self.combined_solid
+        shortlist = []
+        w = 0
+        h = 0
+        for tm in self.tilemaps:
+            if tm.is_solid:
+                shortlist.append(tm)
+                print("debug adding ", tm.name)
+                if (w < tm.width): w = tm.width
+                if (h < tm.height): h = tm.height
+            else:
+                print("debug ignoring ", tm.name)
+
+        if (w == 0) or (h == 0):
+            return None
+        combined = np.zeros((int(w), int(h)))
+        for tm in shortlist:
+            for c in range(int(tm.width)):
+                for r in range(int(tm.height)):
+                    if (tm.tiles[c,r] > 0):
+                        combined[c,r] = tm.tiles[c,r]
+        return combined
+
+    def get_slice(self, start_col, num_cols):
+        solid = self.get_combined_solid()
+        slc = np.zeros((num_cols, solid.shape[1]))
+        for c in range(num_cols):
+            for r in range(solid.shape[1]):
+                slc[c,r] = 1. if solid[c+start_col, r] > 0 else 0
+        return slc
         
+# ***************************************************
+        
+# TODO - Move to separte test module once stablized
+
+def generate_image_from_slice(slc):
+    img = pimg.new('RGBA', slc.shape)
+    for c in range(slc.shape[0]):
+        for r in range(slc.shape[1]):
+            if (slc[c,r] == 0):
+                img.putpixel((c,r), (0,0,0,255))
+            else:
+                img.putpixel((c,r), (255,0,255,255))
+    return img
+
 def test_stfilenode():
     root = STFileNode("1")
     branch = STFileNode("1-1")
@@ -171,10 +243,7 @@ def test_stfilenode():
     parseroot.parse_from_string("(2 (2-1 (2-1-1)(2-1-2)(2-1-3))(2-2(2-2-1)(2-2-2)(2-2-3)))")
     parseroot.print_self_and_children()  
 
-            
-# TODO - Move to separte test module once stablized
-if __name__ == "__main__":
-    test_stfilenode()
+def test_sttilemap():
     f = open("tuxlevels/icy_valley.stl", 'rt')
     s = f.read()
     f.close()
@@ -186,4 +255,18 @@ if __name__ == "__main__":
     print(tilemaps[0].get_child_by_name("tiles").payload)
     tm = STTilemap(tilemaps[0])
     print (tm.tiles)
+    
+
+def test_stlevel():
+    level = STLevel("tuxlevels/icy_valley.stl")
+    solid_map = level.get_combined_solid()
+    print(solid_map)
+    img = generate_image_from_slice(level.get_slice(0, 512))
+    img.save("test.png")
+    return solid_map
+
+if __name__ == "__main__":
+#    test_stfilenode()
+#    test_sttilemap()
+    sm = test_stlevel()
     
