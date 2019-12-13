@@ -129,3 +129,6 @@ dmypy.json
 
 # csv data files
 *.csv
+
+# supertux level filse are too large so best not include them
+*.stl
