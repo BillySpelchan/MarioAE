@@ -210,7 +210,25 @@ class STLevel:
             for r in range(solid.shape[1]):
                 slc[c,r] = 1. if solid[c+start_col, r] > 0 else 0
         return slc
+ 
+class MapManager:
+    def __init__(self):
+        self.maps = {}
+        self.enironment_maps = {}
         
+    def get_map(self, map_name):
+        if map_name in self.maps:
+            return self.maps[map_name]
+        else:
+            newmap = STLevel()
+            newmap.load_level(map_name)
+            self.maps[map_name] = newmap
+            return newmap
+    
+    def add_map(self, map_name, level):
+        self.maps[map_name] = level
+        
+
 # ***************************************************
         
 # TODO - Move to separte test module once stablized
@@ -257,8 +275,8 @@ def test_sttilemap():
     print (tm.tiles)
     
 
-def test_stlevel():
-    level = STLevel("tuxlevels/icy_valley.stl")
+def test_stlevel(mm):
+    level = mm.get_map("levels/icy_valley.stl")
     solid_map = level.get_combined_solid()
     print(solid_map)
     img = generate_image_from_slice(level.get_slice(0, 512))
@@ -268,5 +286,6 @@ def test_stlevel():
 if __name__ == "__main__":
 #    test_stfilenode()
 #    test_sttilemap()
-    sm = test_stlevel()
+    mm = MapManager()
+    sm = test_stlevel(mm)
     
