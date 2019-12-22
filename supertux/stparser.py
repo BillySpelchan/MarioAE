@@ -61,7 +61,7 @@ class STFileNode:
         while (s[indx].isspace() == False and s[indx]!='(' and s[indx]!=')'):
             nodename += s[indx]
             indx +=1
-        print ("debug..adding node ", nodename)
+        #print ("debug..adding node ", nodename)
         self.node_name = nodename
         payload = ""
         while (s[indx] != ")"):
@@ -127,7 +127,7 @@ class STTilemap:
     
     def set_from_tilemap_node(self, node):
         solid = node.get_child_by_name("solid")
-        print("debug - solid payload:", solid.payload)
+        #print("debug - solid payload:", solid.payload)
         self.is_solid = False if 'f' in solid.payload else True
         
         self.speed_x = self.parse_float_from_node(node, "speed-x", 1.0)
@@ -154,7 +154,7 @@ class STTilemap:
                     row += 1
             except:
                 pass
-        print("debug ", self.width, ",", self.height, " ? ", row, ",", col )
+        #print("debug ", self.width, ",", self.height, " ? ", row, ",", col )
         
 
 class STLevel:
@@ -187,11 +187,9 @@ class STLevel:
         for tm in self.tilemaps:
             if tm.is_solid:
                 shortlist.append(tm)
-                print("debug adding ", tm.name)
+                #print("debug adding ", tm.name)
                 if (w < tm.width): w = tm.width
                 if (h < tm.height): h = tm.height
-            else:
-                print("debug ignoring ", tm.name)
 
         if (w == 0) or (h == 0):
             return None

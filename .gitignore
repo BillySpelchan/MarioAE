@@ -132,3 +132,4 @@ dmypy.json
 
 # supertux level filse are too large so best not include them
 *.stl
+supertux/levels/
