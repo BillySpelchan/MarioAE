@@ -85,12 +85,24 @@ class STANode:
         self.prev = None
         self.next = None
 
-    def process_moves(self, pq, controller):
-        if self.jump_state != 0:
-            if controller.can_enter(self.row+1, self.col):
-                #todo add falling
-                pass
-            elif controller.can_enter(self.row, self.col+1):
-                child = STANode(self.row, self.col+1, self, self.move_speed, 0, self.time_taken+1)
+    def setLocation(self, row, col, isFalling):
+        self.row = row
+        self.col = col       
+        self.jump_state = STANode.JUMP_FREEFALL if isFalling else STANode.JUMP_NONE
+        
+    
+    def generate_forward_node(self, controller):
+        hit_wall = not controller.can_enter(self.row, self.col+1)
+        if (hit_wall) and (self.move_speed == 0):
+            return None
+        child = STANode(self)
+        if hit_wall:
+            child.move_speed = 0
+        else:
+            child.col = self.col+1
+            if self.move_speed < STANode.SPEED_RUN:
+                child.move_speed += 1
+        child.time_taken += (4-child.move_speed)
+        return child
 
     

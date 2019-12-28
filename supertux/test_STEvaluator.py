@@ -22,9 +22,9 @@ class MochMapController:
                 result = True
                 break
         return result
+
     
 class TestMochMapController(unittest.TestCase):
-    
     def test_moch_map_controller(self):
         mmc = MochMapController()
         mmc.set_enterable_list([(1,2), (2,1)])
@@ -32,8 +32,39 @@ class TestMochMapController(unittest.TestCase):
         self.assertEqual(mmc.can_enter(2,1), True)
         self.assertEqual(mmc.can_enter(2,2), False)
 
-class TestPriorityQueue(unittest.TestCase):
 
+class TestSTANode(unittest.TestCase):
+    def test_generate_forward_node(self):
+        # set up moch controller to 
+        mmc = MochMapController()
+        mmc.set_enterable_list([(10,11), (10,12), (10,13), (10,14), (10,15)])
+        node = STEvaluator.STANode(None)
+        node.setLocation(10,10, False)
+        for step in range(1,5):
+            node = node.generate_forward_node(mmc)
+            self.assertEqual(node.row, 10)
+            self.assertEqual(node.col, 10+step)
+            self.assertEqual(node.move_speed, min(step, 3))
+
+    def test_generate_forward_node_when_hitting_something(self):
+        # set up moch controller to 
+        mmc = MochMapController()
+        mmc.set_enterable_list([(10,11), (10,12), (10,13)] )
+        node = STEvaluator.STANode(None)
+        node.setLocation(10,10, False)
+        for step in range(1,4):
+            node = node.generate_forward_node(mmc)
+            self.assertEqual(node.row, 10)
+            self.assertEqual(node.col, 10+step)
+            self.assertEqual(node.move_speed, step)
+        node = node.generate_forward_node(mmc)
+        self.assertEqual(node.col, 13)
+        self.assertEqual(node.move_speed, 0)
+        node = node.generate_forward_node(mmc)
+        self.assertIsNone(node)
+       
+            
+class TestPriorityQueue(unittest.TestCase):
     def test_adding_to_queue_reverse_order(self):
         first = STEvaluator.STANode(None, 1)
         second = STEvaluator.STANode( None, 2)
