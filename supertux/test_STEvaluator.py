@@ -62,7 +62,31 @@ class TestSTANode(unittest.TestCase):
         self.assertEqual(node.move_speed, 0)
         node = node.generate_forward_node(mmc)
         self.assertIsNone(node)
-       
+    
+    def test_freefall_when_invalid(self):
+        mmc = MochMapController()
+        node = STEvaluator.STANode(None)
+        node.setLocation(10,10, False)
+        child = node.generate_freefall_node(mmc)
+        self.assertIsNone(child)
+        node.jump_state = 5
+        child = node.generate_freefall_node(mmc)
+        self.assertIsNone(child)
+        
+    def test_freefalling_down(self):
+        mmc = MochMapController()
+        mmc.set_enterable_list([(11,10), (12,10), (13,10)] )
+        node = STEvaluator.STANode(None)
+        node.setLocation(10,10, True)
+        for step in range(1, 4):
+            node = node.generate_freefall_node(mmc)
+            self.assertEqual(node.row, 10+step)
+            self.assertEqual(node.col, 10)
+        # now should be on ground so ...
+        self.assertEqual(node.jump_state, 0)
+        node = node.generate_freefall_node(mmc)
+        self.assertIsNone(node)
+        
             
 class TestPriorityQueue(unittest.TestCase):
     def test_adding_to_queue_reverse_order(self):

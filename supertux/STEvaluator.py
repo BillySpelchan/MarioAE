@@ -102,7 +102,20 @@ class STANode:
             child.col = self.col+1
             if self.move_speed < STANode.SPEED_RUN:
                 child.move_speed += 1
+        
         child.time_taken += (4-child.move_speed)
         return child
 
+    def generate_freefall_node(self, controller):
+        if self.jump_state != STANode.JUMP_FREEFALL:
+            return None
+        child = STANode(self)
+        # sanity check for falling when should have landed
+        if (controller.can_enter(child.row+1, child.col)):
+            child.row += 1
+        #landing check
+        if not(controller.can_enter(child.row+1, child.col)):
+            child.jump_state = 0
+            child.move_speed = 0
+        return child
     
