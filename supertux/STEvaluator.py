@@ -65,15 +65,32 @@ class STANode:
     JUMP_PEEK = 5
     JUMP_FREEFALL = -1
     
-    def __init__(self, row, col, parent, move_speed, jump_state, time_taken):
-        self.row = row
-        self.col = col
+    def __init__(self, parent=None, time=0):
         self.parent = parent
-        self.move_speed = move_speed
-        self.jump_state = jump_state
-        self.time_taken = time_taken
+        if parent is not None:            
+            self.row = parent.row
+            self.col = parent.col
+            self.move_speed = parent.move_speed
+            self.jump_start = parent.jump_start
+            self.jump_state = parent.jump_state
+            self.time_taken = parent.time_taken
+        else:
+            self.row = 0
+            self.col = 0
+            self.move_speed = 0
+            self.jump_start = 0
+            self.jump_state = 0
+            self.time_taken = time
+            
         self.prev = None
         self.next = None
-        
+
+    def process_moves(self, pq, controller):
+        if self.jump_state != 0:
+            if controller.can_enter(self.row+1, self.col):
+                #todo add falling
+                pass
+            elif controller.can_enter(self.row, self.col+1):
+                child = STANode(self.row, self.col+1, self, self.move_speed, 0, self.time_taken+1)
 
     
