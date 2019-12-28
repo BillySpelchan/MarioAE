@@ -6,40 +6,60 @@ Created on Sun Dec 22 09:05:32 2019
 """
 
 import stparser
+import json
 
-def analyse_levels():
-    flagged_list = []
-    potential_list = []
+def group_levels_by_size(json_output = None, verbose=False):
+    groupings = {}
     f = open ("levels/levellist.txt", 'r')
     for line in f:
-        print ("processing: ", line)
+        level = stparser.STLevel()
+        sline = line.rstrip()
+        if (verbose):
+            print("Processing file: ", sline)
+        level.load_level(sline)
+        solid_map = level.get_combined_solid()
+        if solid_map is None:
+            continue
+        key = str(solid_map.shape[1])
+        if key not in groupings:
+            groupings[key] = []
+        groupings[key].append(sline)            
+    f.close()
+    if json_output is not None:
+        j = json.dumps(groupings)
+        f = open(json_output, 'w')
+        f.write(j)
+        f.close()
+    return groupings
+    
+def make_png_of_all_levels():
+    f = open ("levels/levellist.txt", 'r')
+    for line in f:
         pngname = line.replace('.stl', '.png').rstrip()
         level = stparser.STLevel()
         level.load_level(line.rstrip())
         solid_map = level.get_combined_solid()
         if solid_map is None:
-            flagged_list.append(line.rstrip() + " No tilemaps???")
             continue
-        print ("resulting map is shape ", solid_map.shape)
-        if solid_map.shape[1] != 27:
-            flagged_list.append(line.rstrip() + " wrong shape " + str(solid_map.shape))
-        else:
-            potential_list.append(line.rstrip())
         print ("saving environment image to ", pngname)
         img = stparser.generate_image_from_slice(level.get_slice(0, solid_map.shape[0]))
         img.save(pngname)
-        print()
     f.close()
-    return (potential_list, flagged_list)
         
-    #stparser.generate_image_from_slice(slc)
+
 if __name__ == "__main__":
-    p_lst, f_lst = analyse_levels()
-    print()
-    print("*** flagged files ***")
-    for l in f_lst:
-        print(l)
-    print()
-    print("*** Shortlist files ***")
-    for l in p_lst:
-        print(l)
+    #groupings = group_levels_by_size("levellist.json", True)
+    f = open("levellist.json", 'r')
+    s = f.read()
+    f.close()
+    j = json.loads(s)
+    f = open("level_count.csv", 'w' )
+    for k in j.keys():
+        f.write(k)
+        w = len(j[k])
+        f.write(',')
+        f.write(str(w))
+        f.write('\n')
+        print(k, " has " , w, " levels")
+    f.close()
+ 
