@@ -6,7 +6,14 @@ Created on Fri Dec 27 15:27:15 2019
 """
 
 import unittest
+import numpy as np
 import STEvaluator
+
+# remember that we use c,r for maps
+MAP_WALKING = [[0,0,0,0,0,0,1],[0,0,0,0,0,0,1],[0,0,0,0,0,0,1],
+               [0,0,0,0,0,0,1],[0,0,0,0,0,0,1],[0,0,0,0,0,0,1],
+               [0,0,0,0,0,0,1] ]
+
 
 class MochMapController:
     def __init__(self):
@@ -86,8 +93,55 @@ class TestSTANode(unittest.TestCase):
         self.assertEqual(node.jump_state, 0)
         node = node.generate_freefall_node(mmc)
         self.assertIsNone(node)
+  
+    def test_jumping_up(self):
+        mmc = MochMapController()
+        mmc.set_enterable_list([(9,10), (8,10), (7,10), (6,10), (5,10)] )
         
-            
+        node = STEvaluator.STANode(None)
+        node.setLocation(10,10, False)
+        for step in range(1, 6):
+            node = node.generate_jump_node(mmc)
+            self.assertEqual(node.row, 10-step)
+            self.assertEqual(node.col, 10)
+        # now should be in freefall so ...
+        node = node.generate_jump_node(mmc)
+        self.assertEqual(node.jump_state, -1)
+        self.assertEqual(node.row, 5)
+        self.assertEqual(node.col, 10)
+        
+        node = node.generate_jump_node(mmc)
+        self.assertIsNone(node)
+        
+    def test_multiple_jumps_from_same_column(self):
+        #(not allowed)
+        mmc = MochMapController()
+        mmc.set_enterable_list([(9,10), (8,10), (7,10), (6,10), (5,10), (4,10)] )
+        node = STEvaluator.STANode(None)
+        node.setLocation(10,10, False)
+        node.jump_start = 10
+        node = node.generate_jump_node(mmc)
+        self.assertIsNone(node)
+ 
+class TestMapSliceController(unittest.TestCase):
+    def test_checking_enter_tiles(self):
+        # remember that we use c,r for maps, 
+        # though for identity it doesn't matter
+        slc = np.array([[1,0,0],[0,1,0],[0,0,1]])
+        mc = STEvaluator.STMapSliceController(slc)
+        self.assertEqual(mc.can_enter(0,0), False )
+        self.assertEqual(mc.can_enter(0,1), True )
+        self.assertEqual(mc.can_enter(0,2), True )
+        self.assertEqual(mc.can_enter(1,0), True)
+        self.assertEqual(mc.can_enter(1,1), False )
+        self.assertEqual(mc.can_enter(1,2), True )
+        self.assertEqual(mc.can_enter(2,0), True )
+        self.assertEqual(mc.can_enter(2,1), True )
+        self.assertEqual(mc.can_enter(2,2), False )
+        
+        
+        
+       
 class TestPriorityQueue(unittest.TestCase):
     def test_adding_to_queue_reverse_order(self):
         first = STEvaluator.STANode(None, 1)

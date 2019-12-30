@@ -117,5 +117,41 @@ class STANode:
         if not(controller.can_enter(child.row+1, child.col)):
             child.jump_state = 0
             child.move_speed = 0
+        child.time_taken += 1
         return child
+    
+    def generate_jump_node(self, controller):
+        if self.jump_state < 0 or self.jump_state > STANode.JUMP_PEEK:
+            return None
+        if self.jump_state == 0 and self.jump_start == self.col:
+            return None
+        child = STANode(self)
+        if child.jump_state == 0:
+            child.jump_start = child.col
+        child.time_taken += 1
+        child.jump_state += 1
+        if (child.jump_state > STANode.JUMP_PEEK):
+            child.jump_state = STANode.JUMP_FREEFALL
+        elif controller.can_enter(child.row-1, child.col):
+            child.row -= 1
+        return child
+    
+class STMapSliceController:
+    """
+    Remember that we are using c,r format for maps as we care about vertical
+    slices of the column.
+    """
+    
+    def __init__(self, slc = None):
+        self.current_slice = slc
+        
+    def set_slice(self, slc):
+        self.current_slice = slc
+        
+    def can_enter(self, row, col):
+        if col < 0: return False
+        if col > self.current_slice.shape[0]: return False
+        if row < 0: return True
+        if row >= self.current_slice.shape[1]: return True
+        return self.current_slice[col, row] < .5
     
