@@ -22,10 +22,10 @@ class MochMapController:
     def set_enterable_list(self, lst):
         self.enter_list = lst
         
-    def can_enter(self, row, col):
+    def can_enter(self, x, y):
         result = False
         for loc in self.enter_list:
-            if (loc[0] == row) and (loc[1] == col):
+            if (loc[0] == x) and (loc[1] == y):
                 result = True
                 break
         return result
@@ -44,28 +44,28 @@ class TestSTANode(unittest.TestCase):
     def test_generate_forward_node(self):
         # set up moch controller to 
         mmc = MochMapController()
-        mmc.set_enterable_list([(10,11), (10,12), (10,13), (10,14), (10,15)])
+        mmc.set_enterable_list([(11,10), (12,10), (13,10), (14,10), (15,10)])
         node = STEvaluator.STANode(None)
         node.setLocation(10,10, False)
         for step in range(1,5):
             node = node.generate_forward_node(mmc)
-            self.assertEqual(node.row, 10)
-            self.assertEqual(node.col, 10+step)
+            self.assertEqual(node.y, 10)
+            self.assertEqual(node.x, 10+step)
             self.assertEqual(node.move_speed, min(step, 3))
 
     def test_generate_forward_node_when_hitting_something(self):
         # set up moch controller to 
         mmc = MochMapController()
-        mmc.set_enterable_list([(10,11), (10,12), (10,13)] )
+        mmc.set_enterable_list([(11,10), (12,10), (13,10)] )
         node = STEvaluator.STANode(None)
         node.setLocation(10,10, False)
         for step in range(1,4):
             node = node.generate_forward_node(mmc)
-            self.assertEqual(node.row, 10)
-            self.assertEqual(node.col, 10+step)
+            self.assertEqual(node.y, 10)
+            self.assertEqual(node.x, 10+step)
             self.assertEqual(node.move_speed, step)
         node = node.generate_forward_node(mmc)
-        self.assertEqual(node.col, 13)
+        self.assertEqual(node.x, 13)
         self.assertEqual(node.move_speed, 0)
         node = node.generate_forward_node(mmc)
         self.assertIsNone(node)
@@ -82,13 +82,13 @@ class TestSTANode(unittest.TestCase):
         
     def test_freefalling_down(self):
         mmc = MochMapController()
-        mmc.set_enterable_list([(11,10), (12,10), (13,10)] )
+        mmc.set_enterable_list([(10,11), (10,12), (10,13)] )
         node = STEvaluator.STANode(None)
         node.setLocation(10,10, True)
         for step in range(1, 4):
             node = node.generate_freefall_node(mmc)
-            self.assertEqual(node.row, 10+step)
-            self.assertEqual(node.col, 10)
+            self.assertEqual(node.y, 10+step)
+            self.assertEqual(node.x, 10)
         # now should be on ground so ...
         self.assertEqual(node.jump_state, 0)
         node = node.generate_freefall_node(mmc)
@@ -96,19 +96,19 @@ class TestSTANode(unittest.TestCase):
   
     def test_jumping_up(self):
         mmc = MochMapController()
-        mmc.set_enterable_list([(9,10), (8,10), (7,10), (6,10), (5,10)] )
+        mmc.set_enterable_list([(10,9), (10,8), (10,7), (10,6), (10,5)] )
         
         node = STEvaluator.STANode(None)
         node.setLocation(10,10, False)
         for step in range(1, 6):
             node = node.generate_jump_node(mmc)
-            self.assertEqual(node.row, 10-step)
-            self.assertEqual(node.col, 10)
+            self.assertEqual(node.y, 10-step)
+            self.assertEqual(node.x, 10)
         # now should be in freefall so ...
         node = node.generate_jump_node(mmc)
         self.assertEqual(node.jump_state, -1)
-        self.assertEqual(node.row, 5)
-        self.assertEqual(node.col, 10)
+        self.assertEqual(node.y, 5)
+        self.assertEqual(node.x, 10)
         
         node = node.generate_jump_node(mmc)
         self.assertIsNone(node)
@@ -116,7 +116,7 @@ class TestSTANode(unittest.TestCase):
     def test_multiple_jumps_from_same_column(self):
         #(not allowed)
         mmc = MochMapController()
-        mmc.set_enterable_list([(9,10), (8,10), (7,10), (6,10), (5,10), (4,10)] )
+        mmc.set_enterable_list([(10,9), (10,8), (10,7), (10,6), (10,5), (10,4)] )
         node = STEvaluator.STANode(None)
         node.setLocation(10,10, False)
         node.jump_start = 10
@@ -138,8 +138,12 @@ class TestMapSliceController(unittest.TestCase):
         self.assertEqual(mc.can_enter(2,0), True )
         self.assertEqual(mc.can_enter(2,1), True )
         self.assertEqual(mc.can_enter(2,2), False )
+        self.assertEqual(mc.can_enter(-1,2), False )
+        self.assertEqual(mc.can_enter(23,2), False )
+        self.assertEqual(mc.can_enter(2,-2), True )
+        self.assertEqual(mc.can_enter(2,22), True )
         
-        
+            
         
        
 class TestPriorityQueue(unittest.TestCase):

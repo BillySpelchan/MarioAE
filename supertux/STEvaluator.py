@@ -68,15 +68,15 @@ class STANode:
     def __init__(self, parent=None, time=0):
         self.parent = parent
         if parent is not None:            
-            self.row = parent.row
-            self.col = parent.col
+            self.x = parent.x
+            self.y = parent.y
             self.move_speed = parent.move_speed
             self.jump_start = parent.jump_start
             self.jump_state = parent.jump_state
             self.time_taken = parent.time_taken
         else:
-            self.row = 0
-            self.col = 0
+            self.x = 0
+            self.y = 0
             self.move_speed = 0
             self.jump_start = 0
             self.jump_state = 0
@@ -85,21 +85,21 @@ class STANode:
         self.prev = None
         self.next = None
 
-    def setLocation(self, row, col, isFalling):
-        self.row = row
-        self.col = col       
+    def setLocation(self, x, y, isFalling):
+        self.x = x
+        self.y = y
         self.jump_state = STANode.JUMP_FREEFALL if isFalling else STANode.JUMP_NONE
         
     
     def generate_forward_node(self, controller):
-        hit_wall = not controller.can_enter(self.row, self.col+1)
+        hit_wall = not controller.can_enter(self.x+1, self.y)
         if (hit_wall) and (self.move_speed == 0):
             return None
         child = STANode(self)
         if hit_wall:
             child.move_speed = 0
         else:
-            child.col = self.col+1
+            child.x = self.x+1
             if self.move_speed < STANode.SPEED_RUN:
                 child.move_speed += 1
         
@@ -111,10 +111,10 @@ class STANode:
             return None
         child = STANode(self)
         # sanity check for falling when should have landed
-        if (controller.can_enter(child.row+1, child.col)):
-            child.row += 1
+        if (controller.can_enter(child.x, child.y+1)):
+            child.y += 1
         #landing check
-        if not(controller.can_enter(child.row+1, child.col)):
+        if not(controller.can_enter(child.x, child.y+1)):
             child.jump_state = 0
             child.move_speed = 0
         child.time_taken += 1
@@ -123,17 +123,17 @@ class STANode:
     def generate_jump_node(self, controller):
         if self.jump_state < 0 or self.jump_state > STANode.JUMP_PEEK:
             return None
-        if self.jump_state == 0 and self.jump_start == self.col:
+        if self.jump_state == 0 and self.jump_start == self.x:
             return None
         child = STANode(self)
         if child.jump_state == 0:
-            child.jump_start = child.col
+            child.jump_start = child.x
         child.time_taken += 1
         child.jump_state += 1
         if (child.jump_state > STANode.JUMP_PEEK):
             child.jump_state = STANode.JUMP_FREEFALL
-        elif controller.can_enter(child.row-1, child.col):
-            child.row -= 1
+        elif controller.can_enter(child.x, child.y-1):
+            child.y -= 1
         return child
     
 class STMapSliceController:
@@ -148,10 +148,10 @@ class STMapSliceController:
     def set_slice(self, slc):
         self.current_slice = slc
         
-    def can_enter(self, row, col):
-        if col < 0: return False
-        if col > self.current_slice.shape[0]: return False
-        if row < 0: return True
-        if row >= self.current_slice.shape[1]: return True
-        return self.current_slice[col, row] < .5
+    def can_enter(self, x, y):
+        if x < 0: return False
+        if x > self.current_slice.shape[0]: return False
+        if y < 0: return True
+        if y >= self.current_slice.shape[1]: return True
+        return self.current_slice[x, y] < .5
     
