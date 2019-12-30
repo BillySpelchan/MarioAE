@@ -14,6 +14,22 @@ MAP_WALKING = [[0,0,0,0,0,0,1],[0,0,0,0,0,0,1],[0,0,0,0,0,0,1],
                [0,0,0,0,0,0,1],[0,0,0,0,0,0,1],[0,0,0,0,0,0,1],
                [0,0,0,0,0,0,1] ]
 
+COMPLEX_PATH = [ [0,0,0,0,0,0,1],[0,0,0,0,0,0,1],[0,0,0,0,0,0,1],
+                [0,0,0,0,0,0,1],[1,0,0,0,0,0,1],[1,0,0,1,0,0,0],
+                [1,0,0,1,0,0,0],[1,0,0,1,0,0,0],[1,0,0,1,0,0,0],
+                [1,0,0,0,0,0,0],[1,0,0,0,0,0,0],[1,0,0,0,0,0,0],
+                [1,0,0,0,0,0,0],[1,0,0,0,0,0,0],[1,0,0,0,0,0,0],
+                [0,0,0,0,0,0,1],[0,0,0,0,0,0,1],[0,0,0,0,0,0,1],
+                [0,0,0,0,0,0,1] ]
+
+COMPLEX_PATH_MAP_STRINGS = ["X......","X......","X......",
+                            "X......","X.....X","...X..X",
+                            "...X..X","...X..X","...X..X",
+                            "......X","......X","......X",
+                            "......X","......X","......X",
+                            "X......","X......","X......",
+                            "X......"    ]
+
 
 class MochMapController:
     def __init__(self):
@@ -143,8 +159,26 @@ class TestMapSliceController(unittest.TestCase):
         self.assertEqual(mc.can_enter(2,-2), True )
         self.assertEqual(mc.can_enter(2,22), True )
         
+    def test_checking_if_alive(self):
+        slc = np.array([[1,0,0],[0,1,0],[0,0,1]])
+        mc = STEvaluator.STMapSliceController(slc)
+        self.assertEqual(mc.is_alive(0,2), True )
+        self.assertEqual(mc.is_alive(1,2), True )
+        self.assertEqual(mc.is_alive(1,3), False )
+        self.assertEqual(mc.is_alive(2,2), False )
+        self.assertEqual(mc.is_alive(3,2), False )
+        self.assertEqual(mc.is_alive(-1,2), False )
+        self.assertEqual(mc.is_alive(1,-1), True )
             
-        
+    def test_printing_map_slices(self):
+        slc = np.array(COMPLEX_PATH)
+        mc = STEvaluator.STMapSliceController(slc)
+        col = 0
+        for s in COMPLEX_PATH_MAP_STRINGS:
+            ts = mc.get_map_column_as_string(col)
+            col += 1
+            #print(ts)
+            self.assertEqual(ts,s)
        
 class TestPriorityQueue(unittest.TestCase):
     def test_adding_to_queue_reverse_order(self):

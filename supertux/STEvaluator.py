@@ -150,8 +150,32 @@ class STMapSliceController:
         
     def can_enter(self, x, y):
         if x < 0: return False
-        if x > self.current_slice.shape[0]: return False
+        if x >= self.current_slice.shape[0]: return False
         if y < 0: return True
         if y >= self.current_slice.shape[1]: return True
         return self.current_slice[x, y] < .5
+
+    def is_alive(self, x, y):
+        if x < 0: return False
+        if x >= self.current_slice.shape[0]: return False
+        if y < 0: return True
+        if y >= self.current_slice.shape[1]: return False
+        return self.current_slice[x, y] < .5
     
+    def get_map_column_as_string(self, col, path_nodes=None):
+        rows = self.current_slice.shape[1]
+        result= ''
+        for y in range(rows):
+            row = rows-y-1
+            ch = '.' if self.current_slice[col,row] < .5 else 'X'
+            if path_nodes is not None:
+                for p in path_nodes:
+                    if (p.x == col) and (p.y == row):
+                        ch = '@'
+                        break
+            result += ch
+        return result
+
+
+       
+        
