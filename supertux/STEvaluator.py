@@ -161,6 +161,11 @@ class STMapSliceController:
         if y < 0: return True
         if y >= self.current_slice.shape[1]: return False
         return self.current_slice[x, y] < .5
+
+    def has_won(self, x, y):
+        if x >= self.current_slice.shape[0]-1: 
+            return self.is_alive(x,y)
+        return False
     
     def get_map_column_as_string(self, col, path_nodes=None):
         rows = self.current_slice.shape[1]

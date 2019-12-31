@@ -169,6 +169,15 @@ class TestMapSliceController(unittest.TestCase):
         self.assertEqual(mc.is_alive(3,2), False )
         self.assertEqual(mc.is_alive(-1,2), False )
         self.assertEqual(mc.is_alive(1,-1), True )
+        
+    def test_if_won(self):
+        slc = np.array([[1,0,0],[0,1,0],[0,0,1]])
+        mc = STEvaluator.STMapSliceController(slc)
+        self.assertEqual(mc.has_won(0,2), False )
+        self.assertEqual(mc.has_won(1,2), False )
+        self.assertEqual(mc.has_won(1,1), False )
+        self.assertEqual(mc.has_won(2,2), False ) # entering solid
+        self.assertEqual(mc.has_won(2,1), True )
             
     def test_printing_map_slices(self):
         slc = np.array(COMPLEX_PATH)
