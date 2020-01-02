@@ -24,7 +24,7 @@ class STPriorityQueue:
         """
         if self.head_node is None:
             self.head_node = node
-        elif self.head_node.time_taken > node.time_taken:
+        elif self.head_node.priority > node.priority:
             self.head_node.prev = node
             node.next =self.head_node
             self.head_node = node
@@ -34,7 +34,7 @@ class STPriorityQueue:
             while notdone:
                 if nextnode.next is None:
                     notdone = False
-                elif node.time_taken < nextnode.next.time_taken:
+                elif node.priority < nextnode.next.priority:
                     notdone = False
                 else:
                     nextnode = nextnode.next
@@ -65,7 +65,7 @@ class STANode:
     JUMP_PEEK = 5
     JUMP_FREEFALL = -1
     
-    def __init__(self, parent=None, time=0):
+    def __init__(self, parent=None):
         self.parent = parent
         if parent is not None:            
             self.x = parent.x
@@ -74,23 +74,43 @@ class STANode:
             self.jump_start = parent.jump_start
             self.jump_state = parent.jump_state
             self.time_taken = parent.time_taken
+            self.priority = parent.priority
         else:
             self.x = 0
             self.y = 0
             self.move_speed = 0
             self.jump_start = 0
             self.jump_state = 0
-            self.time_taken = time
+            self.time_taken = 0
+            self.priority = 0
             
         self.prev = None
         self.next = None
+
+    def __str__(self):
+        s = str(self.x) + "," + str(self.y)
+        s += " moving at " + str(self.move_speed)
+        if (self.jump_state < 0):
+            s += " falling"
+        elif (self.jump_state > 0):
+            s += " jumping from " + str(self.jump_start)
+            s += " phase " + str(self.jump_state)
+        s += " time " + str(self.time_taken)
+        s += " priority " + str(self.priority)
+        return s
 
     def setLocation(self, x, y, isFalling):
         self.x = x
         self.y = y
         self.jump_state = STANode.JUMP_FREEFALL if isFalling else STANode.JUMP_NONE
         
-    
+
+    def adjust_time(self, controller, time_to_add):
+        self.time_taken += time_to_add
+        distance_delta = controller.get_num_columns() - self.x
+        self.priority = self.time_taken + (distance_delta * 4)
+
+        
     def generate_forward_node(self, controller):
         hit_wall = not controller.can_enter(self.x+1, self.y)
         if (hit_wall) and (self.move_speed == 0):
@@ -103,7 +123,7 @@ class STANode:
             if self.move_speed < STANode.SPEED_RUN:
                 child.move_speed += 1
         
-        child.time_taken += (4-child.move_speed)
+        child.adjust_time(controller, 4-child.move_speed)
         return child
 
     def generate_freefall_node(self, controller):
@@ -118,7 +138,19 @@ class STANode:
             child.jump_state = 0
             child.move_speed = 0
         child.time_taken += 1
+        child.adjust_time(controller, 1)
         return child
+    
+    def generate_freefall_angle_node(self, controller):
+        child = self.generate_freefall_node(controller)
+        if (child is None) or (child.jump_state >= 0):
+            return None
+        if controller.can_enter(child.x+1, child.y):
+            child.x += 1
+            child.jump_state = -1 if controller.can_enter(child.x, child.y+1) else 0
+            child.adjust_time (controller, 4-child.move_speed)
+            return child
+        return None
     
     def generate_jump_node(self, controller):
         if self.jump_state < 0 or self.jump_state > STANode.JUMP_PEEK:
@@ -128,13 +160,24 @@ class STANode:
         child = STANode(self)
         if child.jump_state == 0:
             child.jump_start = child.x
-        child.time_taken += 1
+        child.adjust_time (controller, 1)
         child.jump_state += 1
         if (child.jump_state > STANode.JUMP_PEEK):
             child.jump_state = STANode.JUMP_FREEFALL
         elif controller.can_enter(child.x, child.y-1):
             child.y -= 1
         return child
+
+    def generate_jump_angle_node(self, controller):
+        child = self.generate_jump_node(controller)
+        if child is None:
+            return None
+        if controller.can_enter(child.x+1, child.y):
+            child.x += 1
+            child.adjust_time (controller, 4-child.move_speed)
+            return child
+        return None
+    
     
 class STMapSliceController:
     """

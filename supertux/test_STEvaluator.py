@@ -32,8 +32,9 @@ COMPLEX_PATH_MAP_STRINGS = ["X......","X......","X......",
 
 
 class MochMapController:
-    def __init__(self):
+    def __init__(self, size = 100):
         self.enter_list = []
+        self.size = size
     
     def set_enterable_list(self, lst):
         self.enter_list = lst
@@ -46,6 +47,9 @@ class MochMapController:
                 break
         return result
 
+    def get_num_columns(self):
+        return self.size
+    
     
 class TestMochMapController(unittest.TestCase):
     def test_moch_map_controller(self):
@@ -109,7 +113,24 @@ class TestSTANode(unittest.TestCase):
         self.assertEqual(node.jump_state, 0)
         node = node.generate_freefall_node(mmc)
         self.assertIsNone(node)
-  
+
+
+    def test_freefall_angle(self):
+        mmc = MochMapController()
+        mmc.set_enterable_list([(10,11),(10,12),(11,11), (11,12),(11,13),(12,12), (12,13),(12,14),(13,13)] )
+        node = STEvaluator.STANode(None)
+        node.setLocation(10,10, True)
+        for step in range(1, 4):
+            node = node.generate_freefall_angle_node(mmc)
+
+            self.assertEqual(node.y, 10+step)
+            self.assertEqual(node.x, 10+step)
+        # now should be on ground so ...
+        self.assertEqual(node.jump_state, 0)
+        node = node.generate_freefall_node(mmc)
+        self.assertIsNone(node)
+        
+        
     def test_jumping_up(self):
         mmc = MochMapController()
         mmc.set_enterable_list([(10,9), (10,8), (10,7), (10,6), (10,5)] )
@@ -128,7 +149,26 @@ class TestSTANode(unittest.TestCase):
         
         node = node.generate_jump_node(mmc)
         self.assertIsNone(node)
+
+    def test_jumping_angle(self):
+        mmc = MochMapController()
+        mmc.set_enterable_list([(10,9),(11,9), (11,8),(12,8), (12,7),(13,7), (13,6),(14,6), (14,5),(15,5),(15,6)] )
         
+        node = STEvaluator.STANode(None)
+        node.setLocation(10,10, False)
+        for step in range(1, 6):
+            node = node.generate_jump_angle_node(mmc)
+            self.assertEqual(node.y, 10-step)
+            self.assertEqual(node.x, 10+step)
+        # now should be in freefall so ...
+        node = node.generate_jump_node(mmc)
+        self.assertEqual(node.jump_state, -1)
+        self.assertEqual(node.y, 5)
+        self.assertEqual(node.x, 15)
+        
+        node = node.generate_jump_node(mmc)
+        self.assertIsNone(node)
+       
     def test_multiple_jumps_from_same_column(self):
         #(not allowed)
         mmc = MochMapController()
@@ -191,39 +231,52 @@ class TestMapSliceController(unittest.TestCase):
        
 class TestPriorityQueue(unittest.TestCase):
     def test_adding_to_queue_reverse_order(self):
-        first = STEvaluator.STANode(None, 1)
-        second = STEvaluator.STANode( None, 2)
-        third = STEvaluator.STANode( None, 3)
+        first = STEvaluator.STANode(None)
+        first.priority = 1
+        second = STEvaluator.STANode( None)
+        second.priority = 2
+        third = STEvaluator.STANode( None)
+        third.priority = 3
         pq = STEvaluator.STPriorityQueue()
         pq.enqueue(third)
         pq.enqueue(second)
         pq.enqueue(first)
-        self.assertEqual(pq.dequeue().time_taken, 1)
-        self.assertEqual(pq.dequeue().time_taken, 2)
-        self.assertEqual(pq.dequeue().time_taken, 3)
+        self.assertEqual(pq.dequeue().priority, 1)
+        self.assertEqual(pq.dequeue().priority, 2)
+        self.assertEqual(pq.dequeue().priority, 3)
         self.assertIsNone(pq.dequeue())
     
     def test_adding_to_queue_in_order(self):
-        first = STEvaluator.STANode(None, 1)
-        second = STEvaluator.STANode(None, 2)
-        third = STEvaluator.STANode(None, 3)
+        first = STEvaluator.STANode(None)
+        first.priority = 1
+        second = STEvaluator.STANode( None)
+        second.priority = 2
+        third = STEvaluator.STANode( None)
+        third.priority = 3
         pq = STEvaluator.STPriorityQueue()
         pq.enqueue(first)
         pq.enqueue(second)
         pq.enqueue(third)
-        self.assertEqual(pq.dequeue().time_taken, 1)
-        self.assertEqual(pq.dequeue().time_taken, 2)
-        self.assertEqual(pq.dequeue().time_taken, 3)
+        self.assertEqual(pq.dequeue().priority, 1)
+        self.assertEqual(pq.dequeue().priority, 2)
+        self.assertEqual(pq.dequeue().priority, 3)
         self.assertIsNone(pq.dequeue())
 
     def test_adding_to_queue_in_mixed_order(self):
-        first = STEvaluator.STANode(None, 1)
-        second = STEvaluator.STANode(None, 2)
-        second_b = STEvaluator.STANode(None, 2)
-        third = STEvaluator.STANode( None, 3)
-        third_b = STEvaluator.STANode(None, 3)
-        third_c = STEvaluator.STANode(None, 3)
-        fourth = STEvaluator.STANode(None, 4)
+        first = STEvaluator.STANode(None)
+        first.priority = 1
+        second = STEvaluator.STANode(None)
+        second.priority = 2
+        second_b = STEvaluator.STANode(None)
+        second_b.priority = 2
+        third = STEvaluator.STANode( None)
+        third.priority = 3
+        third_b = STEvaluator.STANode(None)
+        third_b.priority = 3
+        third_c = STEvaluator.STANode(None)
+        third_c.priority = 3
+        fourth = STEvaluator.STANode(None)
+        fourth.priority = 4
         pq = STEvaluator.STPriorityQueue()
         pq.enqueue(first)
         pq.enqueue(third)
@@ -233,13 +286,13 @@ class TestPriorityQueue(unittest.TestCase):
         pq.enqueue(fourth)
         pq.enqueue(third_c)
 
-        self.assertEqual(pq.dequeue().time_taken, 1)
-        self.assertEqual(pq.dequeue().time_taken, 2)
-        self.assertEqual(pq.dequeue().time_taken, 2)
-        self.assertEqual(pq.dequeue().time_taken, 3)
-        self.assertEqual(pq.dequeue().time_taken, 3)
-        self.assertEqual(pq.dequeue().time_taken, 3)
-        self.assertEqual(pq.dequeue().time_taken, 4)
+        self.assertEqual(pq.dequeue().priority, 1)
+        self.assertEqual(pq.dequeue().priority, 2)
+        self.assertEqual(pq.dequeue().priority, 2)
+        self.assertEqual(pq.dequeue().priority, 3)
+        self.assertEqual(pq.dequeue().priority, 3)
+        self.assertEqual(pq.dequeue().priority, 3)
+        self.assertEqual(pq.dequeue().priority, 4)
         self.assertIsNone(pq.dequeue())
 
    
