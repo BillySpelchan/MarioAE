@@ -4,6 +4,7 @@ Created on Fri Dec 27 15:36:47 2019
 
 @author: Billy D. Spelchan
 """
+import numpy as np
 
 class STPriorityQueue:
     def __init__(self):
@@ -112,6 +113,8 @@ class STANode:
 
         
     def generate_forward_node(self, controller):
+        if self.jump_state != 0:
+            return None
         hit_wall = not controller.can_enter(self.x+1, self.y)
         if (hit_wall) and (self.move_speed == 0):
             return None
@@ -122,7 +125,9 @@ class STANode:
             child.x = self.x+1
             if self.move_speed < STANode.SPEED_RUN:
                 child.move_speed += 1
-        
+                
+        if controller.can_enter(child.x, child.y-1):                
+                    child.jump_state = -1        
         child.adjust_time(controller, 4-child.move_speed)
         return child
 
@@ -191,6 +196,9 @@ class STMapSliceController:
     def set_slice(self, slc):
         self.current_slice = slc
         
+    def get_num_columns(self):
+        return self.current_slice.shape[0]
+    
     def can_enter(self, x, y):
         if x < 0: return False
         if x >= self.current_slice.shape[0]: return False
@@ -225,5 +233,93 @@ class STMapSliceController:
         return result
 
 
+    def print_map(self, path_nodes=None):
+        cols = self.current_slice.shape[0]
+        
+        for col in range (cols):
+            print(self.get_map_column_as_string(col, path_nodes))
+
+
+class STAStarPath:
+    def __init__(self, controller, start_x, start_y):
+        self.controller = controller
+        self.start_x = start_x
+        self.start_y = start_y
+        self.best = None
+        self.pq = STPriorityQueue()
+
+    def validate_node(self, node):
+        if node is None: return
+        if self.controller.is_alive(node.x, node.y):
+            t = self.best[node.jump_state+1, node.x, node.y]
+            if t < 1 or t > node.priority:
+                print(node.x,",",node.y, " now ", node.priority)
+                self.best[node.jump_state+1, node.x, node.y] = node.priority
+                self.pq.enqueue(node)
+
+    def get_path_from_node(self, node):
+        if node is None:
+            return []
+        path = [node]
+        while node.parent is not None:
+            path.append(node.parent)
+            node = node.parent
+        path.reverse()
+        return path
+    
+    def find_path(self):
+        start = STANode()
+        end = None
+        start.setLocation(self.start_x, self.start_y, True)
+        while self.pq.dequeue() is not None: pass
+        self.pq.enqueue(start)
+        map_shape = self.controller.current_slice.shape #kludge
+        self.best = np.zeros((7, map_shape[0], map_shape[1])) #kludge
+                        
+        finished = False
+        while not finished:
+            node = self.pq.dequeue()
+            print("node: ",str(node))
+            if node is None:
+                finished = True
+            elif self.controller.has_won(node.x, node.y):
+                end = node
+                finished = True
+            else:
+                self.validate_node(node.generate_forward_node(self.controller))
+                self.validate_node(node.generate_freefall_node(self.controller))
+                self.validate_node(node.generate_freefall_angle_node(self.controller))
+                self.validate_node(node.generate_jump_node(self.controller))
+                self.validate_node(node.generate_jump_angle_node(self.controller))
+        # end while
+        return self.get_path_from_node(end)
+        
+    
+# PROTOTYPING WORK
+        
+if __name__ == '__main__':
+    MAP_WALKING = [[0,0,0,0,0,0,1],[0,0,0,0,0,0,1],[0,0,0,0,0,0,1],
+               [0,0,0,0,0,0,1],[0,0,0,0,0,0,1],[0,0,0,0,0,0,1],
+               [0,0,0,0,0,0,1] ]
+    MAP_BLOCKED = [[0,0,0,0,0,0,1],[0,0,0,0,0,0,1],[0,0,0,0,0,0,1],
+               [0,0,0,0,0,0,1],[1,1,1,1,1,1,1],[0,0,0,0,0,0,1],
+               [0,0,0,0,0,0,1] ]
+    COMPLEX_PATH = [ [0,0,0,0,0,0,1],[0,0,0,0,0,0,1],[0,0,0,0,0,0,1],
+                [0,0,0,0,0,0,1],[1,0,0,0,0,0,1],[1,0,0,1,0,0,0],
+                [1,0,0,1,0,0,0],[1,0,0,1,0,0,0],[1,0,0,1,0,0,0],
+                [1,0,0,0,0,0,0],[1,0,0,0,0,0,0],[1,0,0,0,0,0,0],
+                [1,0,0,0,0,0,0],[1,0,0,0,0,0,0],[1,0,0,0,0,0,0],
+                [0,0,0,0,0,0,1],[0,0,0,0,0,0,1],[0,0,0,0,0,0,1],
+                [0,0,0,0,0,0,1] ]
+
+    #slc = np.array(MAP_WALKING)
+    #slc = np.array(MAP_BLOCKED)
+    slc = np.array(COMPLEX_PATH)
+    controller = STMapSliceController(slc)
+    pf = STAStarPath(controller, 0,5)
+    path = pf.find_path()
+    controller.print_map(path)
+        
+ 
        
         

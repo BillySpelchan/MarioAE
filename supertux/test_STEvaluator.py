@@ -295,6 +295,16 @@ class TestPriorityQueue(unittest.TestCase):
         self.assertEqual(pq.dequeue().priority, 4)
         self.assertIsNone(pq.dequeue())
 
-   
+
+class TestSTAStarPath(unittest.TestCase):
+    def test_walk_path(self):
+        slc = np.array(MAP_WALKING)
+        mc = STEvaluator.STMapSliceController(slc)
+        astar = STEvaluator.STAStarPath(mc, 0,5)
+        path = astar.find_path()
+        self.assertIsNotNone(path)
+        
+        
+    
 if __name__ == '__main__':
     unittest.main()
