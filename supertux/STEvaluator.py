@@ -266,8 +266,52 @@ class STAStarPath:
             node = node.parent
         path.reverse()
         return path
+
+
+    def find_furthest_path_node(self):
+        """
+        This is used for finding the furthest reaching node in the level with
+        reaching the end automatically being furthest reaching. Some levels 
+        may not be completable due to a variety of reasons such as backtracking
+        or platforms or other use of tiles that appear to be impassible when
+        they are not.
+        """
+        start = STANode()
+        start.setLocation(self.start_x, self.start_y, True)
+        while self.pq.dequeue() is not None: pass
+        self.pq.enqueue(start)
+        map_shape = self.controller.current_slice.shape #kludge
+        self.best = np.zeros((7, map_shape[0], map_shape[1])) #kludge
+        furthest = start
+                        
+        finished = False
+        while not finished:
+            node = self.pq.dequeue()
+            #print("node: ",str(node))
+            if node is None:
+                finished = True
+            elif self.controller.has_won(node.x, node.y):
+                furthest = node
+                finished = True
+            else:
+                if (furthest.priority > node.priority):
+                    furthest = node
+                self.validate_node(node.generate_forward_node(self.controller))
+                self.validate_node(node.generate_freefall_node(self.controller))
+                self.validate_node(node.generate_freefall_angle_node(self.controller))
+                self.validate_node(node.generate_jump_node(self.controller))
+                self.validate_node(node.generate_jump_angle_node(self.controller))
+        # end while
+        return furthest
+
     
     def find_path(self):
+        furthest = self.find_furthest_path_node()
+        if self.controller.has_won(furthest.x, furthest.y):
+            return self.get_path_from_node(furthest)
+        else:
+            return []
+"""        
         start = STANode()
         end = None
         start.setLocation(self.start_x, self.start_y, True)
@@ -293,7 +337,7 @@ class STAStarPath:
                 self.validate_node(node.generate_jump_angle_node(self.controller))
         # end while
         return self.get_path_from_node(end)
-        
+"""
     
 # PROTOTYPING WORK
         
