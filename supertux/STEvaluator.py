@@ -253,7 +253,7 @@ class STAStarPath:
         if self.controller.is_alive(node.x, node.y):
             t = self.best[node.jump_state+1, node.x, node.y]
             if t < 1 or t > node.priority:
-                print(node.x,",",node.y, " now ", node.priority)
+                # print(node.x,",",node.y, " now ", node.priority)
                 self.best[node.jump_state+1, node.x, node.y] = node.priority
                 self.pq.enqueue(node)
 
@@ -279,7 +279,7 @@ class STAStarPath:
         finished = False
         while not finished:
             node = self.pq.dequeue()
-            print("node: ",str(node))
+            #print("node: ",str(node))
             if node is None:
                 finished = True
             elif self.controller.has_won(node.x, node.y):
@@ -320,6 +320,14 @@ if __name__ == '__main__':
     path = pf.find_path()
     controller.print_map(path)
         
- 
+    import stparser
+    mm = stparser.MapManager()
+    level = mm.get_map("levels/test/bouncingsnowball.stl")
+    solid_map = level.get_combined_solid()
+    controller = STMapSliceController(solid_map)
+    pf = STAStarPath(controller, 3,9)
+    path = pf.find_path()
+    controller.print_map(path)
+
        
         

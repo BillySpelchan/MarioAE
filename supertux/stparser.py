@@ -97,6 +97,16 @@ class STFileNode:
                 candidate = candidate.next
         return child
 
+    def parse_float_from_child(self, childname, default):
+        child = self.get_child_by_name(childname)
+        if child is None:
+            return default
+        try:
+            val = float(child.payload)
+        except Exception:
+            val = default
+        return val
+
 
 class STTilemap:
     def __init__(self, tilemap_node = None):
@@ -209,6 +219,18 @@ class STLevel:
                 slc[c,r] = 1. if solid[c+start_col, r] > 0 else 0
         return slc
  
+    def get_starting_location(self):
+        spawnpoints = self.root.get_list_of_nodes_of_type("spawnpoint")
+        loc = (0,0)
+        for spawnpoint in spawnpoints:
+            name = spawnpoint.get_child_by_name("name")
+            if name is not None:
+                if ("\"main\"" in name.payload ):
+                    x_pixel = spawnpoint.parse_float_from_child("x", 0)
+                    y_pixel = spawnpoint.parse_float_from_child("y", 0)
+                    loc = (x_pixel//32, y_pixel//32)
+        return loc
+            
 class MapManager:
     def __init__(self):
         self.maps = {}
@@ -285,5 +307,7 @@ if __name__ == "__main__":
 #    test_stfilenode()
 #    test_sttilemap()
     mm = MapManager()
-    sm = test_stlevel(mm)
+#    sm = test_stlevel(mm)
+    level = mm.get_map("levels/bonus1/abednego-level1.stl")
+    level.get_starting_location()
     
