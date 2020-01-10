@@ -81,15 +81,23 @@ if __name__ == "__main__":
     s = f.read()
     f.close()
     j = json.loads(s)
-    for lvl in j["40"]:
+
+    f = open('temp.txt', 'w')
+
+    for lvl in j["35"]:
+        f.write('\n\n***** ')
+        f.write(lvl)
+        print("processing ", lvl)
+        f.write(' *****\n\n')
         level = stparser.STLevel()
         level.load_level(lvl)
         loc = level.get_starting_location()
         solid_map = level.get_combined_solid()
         controller = STEvaluator.STMapSliceController(solid_map)
         pf = STEvaluator.STAStarPath(controller, int(loc[0]), int(loc[1]))
-        path = pf.find_path()
-        if (len(path) > 0):
-            #controller.print_map(path)
-            print(lvl)
+        furthest = pf.find_furthest_path_node()
+        path = pf.get_path_from_node(furthest)
+        s = controller.get_map_as_vertical_string(path)
+        f.write(s)
+    f.close()
             

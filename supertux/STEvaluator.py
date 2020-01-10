@@ -233,12 +233,22 @@ class STMapSliceController:
         return result
 
 
+    def get_map_as_vertical_string(self, path_nodes=None):
+        cols = self.current_slice.shape[0]
+        s = ""
+        for col in range (cols):
+            s += self.get_map_column_as_string(col, path_nodes)
+            s += '\n'
+        return s
+        
     def print_map(self, path_nodes=None):
+        print (self.get_map_as_vertical_string(path_nodes))
+"""
         cols = self.current_slice.shape[0]
         
         for col in range (cols):
             print(self.get_map_column_as_string(col, path_nodes))
-
+"""
 
 class STAStarPath:
     def __init__(self, controller, start_x, start_y):
@@ -294,7 +304,7 @@ class STAStarPath:
                 furthest = node
                 finished = True
             else:
-                if (furthest.priority > node.priority):
+                if (furthest.x < node.x):
                     furthest = node
                 self.validate_node(node.generate_forward_node(self.controller))
                 self.validate_node(node.generate_freefall_node(self.controller))
@@ -311,33 +321,6 @@ class STAStarPath:
             return self.get_path_from_node(furthest)
         else:
             return []
-"""        
-        start = STANode()
-        end = None
-        start.setLocation(self.start_x, self.start_y, True)
-        while self.pq.dequeue() is not None: pass
-        self.pq.enqueue(start)
-        map_shape = self.controller.current_slice.shape #kludge
-        self.best = np.zeros((7, map_shape[0], map_shape[1])) #kludge
-                        
-        finished = False
-        while not finished:
-            node = self.pq.dequeue()
-            #print("node: ",str(node))
-            if node is None:
-                finished = True
-            elif self.controller.has_won(node.x, node.y):
-                end = node
-                finished = True
-            else:
-                self.validate_node(node.generate_forward_node(self.controller))
-                self.validate_node(node.generate_freefall_node(self.controller))
-                self.validate_node(node.generate_freefall_angle_node(self.controller))
-                self.validate_node(node.generate_jump_node(self.controller))
-                self.validate_node(node.generate_jump_angle_node(self.controller))
-        # end while
-        return self.get_path_from_node(end)
-"""
     
 # PROTOTYPING WORK
         
@@ -366,12 +349,17 @@ if __name__ == '__main__':
         
     import stparser
     mm = stparser.MapManager()
-    level = mm.get_map("levels/test/bouncingsnowball.stl")
+    level = mm.get_map("levels/icy_valley.stl")
     solid_map = level.get_combined_solid()
     controller = STMapSliceController(solid_map)
     pf = STAStarPath(controller, 3,9)
-    path = pf.find_path()
-    controller.print_map(path)
-
+    furthest = pf.find_furthest_path_node()
+    path = pf.get_path_from_node(furthest)
+    s = controller.get_map_as_vertical_string(path)
+    f = open('temp.txt', 'w')
+    f.write(s)
+    f.close()
+    print(furthest.x, ",", furthest.y)
+    
        
         
