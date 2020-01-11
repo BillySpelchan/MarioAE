@@ -105,7 +105,9 @@ class STANode:
         self.y = y
         self.jump_state = STANode.JUMP_FREEFALL if isFalling else STANode.JUMP_NONE
         
-
+    def is_falling(self):
+        return True if self.jump_state < 0 else False
+    
     def adjust_time(self, controller, time_to_add):
         self.time_taken += time_to_add
         distance_delta = controller.get_num_columns() - self.x
@@ -158,7 +160,8 @@ class STANode:
         return None
     
     def generate_jump_node(self, controller):
-        if self.jump_state < 0 or self.jump_state > STANode.JUMP_PEEK:
+        jump_peek = STANode.JUMP_PEEK + (max(0, self.move_speed - 1))
+        if self.jump_state < 0 or self.jump_state > jump_peek:
             return None
         if self.jump_state == 0 and self.jump_start == self.x:
             return None
@@ -167,10 +170,13 @@ class STANode:
             child.jump_start = child.x
         child.adjust_time (controller, 1)
         child.jump_state += 1
-        if (child.jump_state > STANode.JUMP_PEEK):
+        
+        if (child.jump_state > jump_peek):
             child.jump_state = STANode.JUMP_FREEFALL
         elif controller.can_enter(child.x, child.y-1):
             child.y -= 1
+        else: # bumped something
+            child.jump_state = STANode.JUMP_FREEFALL
         return child
 
     def generate_jump_angle_node(self, controller):
@@ -291,7 +297,7 @@ class STAStarPath:
         while self.pq.dequeue() is not None: pass
         self.pq.enqueue(start)
         map_shape = self.controller.current_slice.shape #kludge
-        self.best = np.zeros((7, map_shape[0], map_shape[1])) #kludge
+        self.best = np.zeros((9, map_shape[0], map_shape[1])) #kludge
         furthest = start
                         
         finished = False
@@ -335,18 +341,21 @@ if __name__ == '__main__':
                 [0,0,0,0,0,0,1],[1,0,0,0,0,0,1],[1,0,0,1,0,0,0],
                 [1,0,0,1,0,0,0],[1,0,0,1,0,0,0],[1,0,0,1,0,0,0],
                 [1,0,0,0,0,0,0],[1,0,0,0,0,0,0],[1,0,0,0,0,0,0],
-                [1,0,0,0,0,0,0],[1,0,0,0,0,0,0],[1,0,0,0,0,0,0],
-                [0,0,0,0,0,0,1],[0,0,0,0,0,0,1],[0,0,0,0,0,0,1],
-                [0,0,0,0,0,0,1] ]
+                [1,0,0,0,0,0,0],[1,0,0,0,0,0,0],[0,0,0,0,0,0,1],
+                [0,0,0,0,0,0,1],[0,0,0,0,0,0,1], [0,0,0,0,0,0,1] ]
 
     #slc = np.array(MAP_WALKING)
     #slc = np.array(MAP_BLOCKED)
     slc = np.array(COMPLEX_PATH)
     controller = STMapSliceController(slc)
     pf = STAStarPath(controller, 0,5)
+    furthest = pf.find_furthest_path_node()
+    path = pf.get_path_from_node(furthest)
+    controller.print_map(path)
+    print("-----------")
     path = pf.find_path()
     controller.print_map(path)
-        
+    """
     import stparser
     mm = stparser.MapManager()
     level = mm.get_map("levels/icy_valley.stl")
@@ -360,6 +369,6 @@ if __name__ == '__main__':
     f.write(s)
     f.close()
     print(furthest.x, ",", furthest.y)
-    
+    """
        
         

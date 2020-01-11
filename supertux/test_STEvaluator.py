@@ -34,15 +34,30 @@ COMPLEX_PATH_MAP_STRINGS = ["X......","X......","X......",
 class MochMapController:
     def __init__(self, size = 100):
         self.enter_list = []
+        self.enter_ranges = []
         self.size = size
     
     def set_enterable_list(self, lst):
         self.enter_list = lst
+    
+    def add_rectangle(self,x,y,w,h):
+        rect = (x,y,w,h)
+        self.enter_ranges.append(rect)
         
     def can_enter(self, x, y):
         result = False
+        # test specific tiles
         for loc in self.enter_list:
             if (loc[0] == x) and (loc[1] == y):
+                result = True
+                break
+        # test blocks of tiles
+        for rect in self.enter_ranges:
+            x1 = rect[0]
+            x2 = x1 + rect[2]
+            y1 = rect[1]
+            y2 = x1 + rect[3]            
+            if ((x >= x1) and (x < x2)) and ((y >= y1) and (y < y2)):
                 result = True
                 break
         return result
@@ -59,6 +74,18 @@ class TestMochMapController(unittest.TestCase):
         self.assertEqual(mmc.can_enter(2,1), True)
         self.assertEqual(mmc.can_enter(2,2), False)
 
+    def test_adding_rects(self):
+        mmc = MochMapController()
+        mmc.add_rectangle(5,5,5,5)
+        for x in range (5,10):
+            for y in range (5,10):
+                self.assertEqual(mmc.can_enter(x,y), True)
+        for cntr in range (4,11):
+            self.assertEqual(mmc.can_enter(4,cntr), False)
+            self.assertEqual(mmc.can_enter(10,cntr), False)
+            self.assertEqual(mmc.can_enter(cntr,4), False)
+            self.assertEqual(mmc.can_enter(cntr,10), False)
+            
 
 class TestSTANode(unittest.TestCase):
     def test_generate_forward_node(self):
@@ -168,7 +195,59 @@ class TestSTANode(unittest.TestCase):
         
         node = node.generate_jump_node(mmc)
         self.assertIsNone(node)
-       
+
+    def test_different_speed_jumping(self):
+        mmc = MochMapController()
+        mmc.add_rectangle(10,0, 1,11)
+        expected_y = [5,5,4,3]
+        for speed in range(0, 4):
+            node = STEvaluator.STANode(None)
+            node.setLocation(10,10,False)
+            node.move_speed = speed
+            while not node.is_falling():
+                node = node.generate_jump_node(mmc)
+            self.assertEqual(node.y, expected_y[speed], "test for speed " + str(speed))
+            
+    def test_different_speed_jumping_at_angle(self):
+        mmc = MochMapController()
+        mmc.add_rectangle(10,0, 10,11)
+        expected_y = [5,5,4,3]
+        expected_x = [16,16,17,18]
+        for speed in range(0, 4):
+            node = STEvaluator.STANode(None)
+            node.setLocation(10,10,False)
+            node.move_speed = speed
+            while not node.is_falling():
+                node = node.generate_jump_angle_node(mmc)
+            self.assertEqual(node.y, expected_y[speed], "test for speed y " + str(speed))
+            self.assertEqual(node.x, expected_x[speed], "test for speed x " + str(speed))
+            
+ 
+    def test_jump_and_bump(self):
+        mmc = MochMapController()
+        mmc.add_rectangle(10,7, 1,4)
+        for speed in range(0, 4):
+            node = STEvaluator.STANode(None)
+            node.setLocation(10,10,False)
+            node.move_speed = speed
+            while not node.is_falling():
+                node = node.generate_jump_node(mmc)
+            self.assertEqual(node.y, 7, "test for bump " + str(speed))
+
+        
+    def test_jump_at_angle_and_bump(self):
+        mmc = MochMapController()
+        mmc.add_rectangle(10,7, 6,4)
+        for speed in range(0, 4):
+            node = STEvaluator.STANode(None)
+            node.setLocation(10,10,False)
+            node.move_speed = speed
+            while not node.is_falling():
+                node = node.generate_jump_angle_node(mmc)
+            self.assertEqual(node.y, 7, "test for bump y " + str(speed))
+            self.assertEqual(node.x, 14, "test for bump x " + str(speed))
+
+        
     def test_multiple_jumps_from_same_column(self):
         #(not allowed)
         mmc = MochMapController()
