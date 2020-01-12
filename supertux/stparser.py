@@ -224,9 +224,9 @@ class STLevel:
                 start_row = rows - num_rows
             num_rows = rows
             
-        slc = np.zeros((num_cols, solid.shape[1]))
+        slc = np.zeros((num_cols, num_rows))
         for c in range(num_cols):
-            for r in range(num_rows):
+            for r in range(solid.shape[1]):
                 slc[c,r+start_row] = 1. if solid[c+start_col, r] > 0 else 0
         return slc
  
@@ -269,14 +269,34 @@ class MapManager:
         slc = np.reshape(enc, (cols, rows))
         return slc
 
-"""    
-    def get_environmental_encoding_set(self, map_name, rows, cols, overlap):
+
+    def get_env_encoding_set(self, map_name, rows, cols, overlap):
         map_to_encode = self.get_map(map_name)
         map_size = map_to_encode.get_map_size()
         col = 0
-        while col + cols < map_size[0]
-            slc = self.get_slice(col, cols, rows)
-"""
+        enc_set = None
+        while col + cols <= map_size[0]:
+            slc = map_to_encode.get_slice(col, cols, rows)
+            enc = np.reshape(self.slice_to_env_encoding(slc), (1,rows*cols))
+            if enc_set is not None:
+                enc_set = np.append(enc_set, enc, axis=0)
+            else:
+                enc_set = enc
+            if overlap:
+                col += 1
+            else:
+                col += cols
+        return enc_set
+
+    def get_env_encoding_sets(self, map_names, rows, cols, overlap):
+        enc_set = None
+        for map_name in map_names:
+            enc = self.get_env_encoding_set(map_name, rows, cols, overlap)
+            if enc_set is not None:
+                enc_set = np.append(enc_set, enc, axis=0)
+            else:
+                enc_set = enc
+        return enc_set
 
 # ***************************************************
         

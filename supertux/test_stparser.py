@@ -14,7 +14,8 @@ class TestMapManager(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.mm = stparser.MapManager()
-        cls.level = cls.mm.get_map("levels/test/burnnmelt.stl")
+        cls.test_level_filename = "levels/test/burnnmelt.stl"
+        cls.level = cls.mm.get_map(cls.test_level_filename)
         cls.solid_map = cls.level.get_combined_solid()
 
     def test_setup(self):
@@ -35,6 +36,31 @@ class TestMapManager(unittest.TestCase):
         slc = self.mm.env_encoding_to_slice(encoded, 5)
         self.assertEquals(np.array_equal(slc, expected), True)
 
+    def test_get_env_encoding_set(self):
+        # slicing burnmelt map from column 3 
+        test1 = np.array([0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1])
+        training = self.mm.get_env_encoding_set(self.test_level_filename, 36, 1, True)
+        self.assertEqual(training.shape, (100,36))
+        self.assertEqual(np.array_equal(training[3], test1), True)
+        test2 = np.array([0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1,
+                          0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,1])
+        training = self.mm.get_env_encoding_set(self.test_level_filename, 36, 2, True)
+        self.assertEqual(training.shape, (99,72))
+        self.assertEqual(np.array_equal(training[3], test2), True)
+        test3 = np.array([0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1,
+                          0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,1,
+                          0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,1,1,0,1,0,0,0,0,0,0,0,0,0,0,0,1])
+        training = self.mm.get_env_encoding_set(self.test_level_filename, 36, 3, True)
+        self.assertEqual(training.shape, (98,108))
+        self.assertEqual(np.array_equal(training[3], test3), True)
+        test4 = np.array([0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1,
+                          0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,1,
+                          0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,1,1,0,1,0,0,0,0,0,0,0,0,0,0,0,1,
+                          0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,1])
+        training = self.mm.get_env_encoding_set(self.test_level_filename, 36, 4, True)
+        self.assertEqual(training.shape, (97,144))
+        self.assertEqual(np.array_equal(training[3], test4), True)
+    
     @classmethod
     def tearDownClass(cls):
         pass
