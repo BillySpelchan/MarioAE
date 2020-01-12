@@ -75,19 +75,12 @@ def make_level_count_csv():
     f.close()
 
 
-if __name__ == "__main__":
-    #groupings = group_levels_by_size("levellist.json", True)
-    f = open("levellist.json", 'r')
-    s = f.read()
-    f.close()
-    j = json.loads(s)
-
-    f = open('temp.txt', 'w')
-
-    for lvl in j["35"]:
+def build_path_text_file(filename, lvl_list, only_solvable=False):
+    f = open(filename, 'w')
+    for lvl in lvl_list:
         f.write('\n\n***** ')
         f.write(lvl)
-        print("processing ", lvl)
+        print("processing ", lvl, end='')
         f.write(' *****\n\n')
         level = stparser.STLevel()
         level.load_level(lvl)
@@ -98,6 +91,21 @@ if __name__ == "__main__":
         furthest = pf.find_furthest_path_node()
         path = pf.get_path_from_node(furthest)
         s = controller.get_map_as_vertical_string(path)
-        f.write(s)
+        solvable = controller.has_won(furthest.x, furthest.y)
+        if solvable or not only_solvable:
+            f.write(s)
+        else:
+            f.write("Not solvable!\n\n")
+        msg = " Solvable" if solvable else " Not solvable!"
+        print(msg)
     f.close()
-            
+
+if __name__ == "__main__":
+    #groupings = group_levels_by_size("levellist.json", True)
+    f = open("levellist.json", 'r')
+    s = f.read()
+    f.close()
+    j = json.loads(s)
+    
+    build_path_text_file("temp.txt", j["36"], True)
+         
