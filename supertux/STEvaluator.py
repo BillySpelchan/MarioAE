@@ -128,8 +128,8 @@ class STANode:
             if self.move_speed < STANode.SPEED_RUN:
                 child.move_speed += 1
                 
-        if controller.can_enter(child.x, child.y-1):                
-                    child.jump_state = -1        
+        if controller.can_enter(child.x, child.y+1):                
+            child.jump_state = -1        
         child.adjust_time(controller, 4-child.move_speed)
         return child
 
@@ -224,9 +224,10 @@ class STMapSliceController:
             return self.is_alive(x,y)
         return False
     
-    def get_map_column_as_string(self, col, path_nodes=None):
+    def get_map_column_as_string(self, col, path_nodes=None, print_node=False, print_col=False):
         rows = self.current_slice.shape[1]
         result= ''
+        path_node = None
         for y in range(rows):
             row = rows-y-1
             ch = '.' if self.current_slice[col,row] < .5 else 'X'
@@ -234,16 +235,25 @@ class STMapSliceController:
                 for p in path_nodes:
                     if (p.x == col) and (p.y == row):
                         ch = '@'
+                        path_node = p
                         break
             result += ch
+        if print_node:
+            if  (path_node is not None):
+                result += ' '
+                result += str(path_node)
+            else:
+                result += ' no node'
+        if (print_col):
+            result += str(col)
         return result
 
 
-    def get_map_as_vertical_string(self, path_nodes=None):
+    def get_map_as_vertical_string(self, path_nodes=None, print_node=False, print_col=False):
         cols = self.current_slice.shape[0]
         s = ""
         for col in range (cols):
-            s += self.get_map_column_as_string(col, path_nodes)
+            s += self.get_map_column_as_string(col, path_nodes, print_node, print_col)
             s += '\n'
         return s
         
@@ -349,26 +359,21 @@ if __name__ == '__main__':
     slc = np.array(COMPLEX_PATH)
     controller = STMapSliceController(slc)
     pf = STAStarPath(controller, 0,5)
-    furthest = pf.find_furthest_path_node()
-    path = pf.get_path_from_node(furthest)
-    controller.print_map(path)
-    print("-----------")
     path = pf.find_path()
     controller.print_map(path)
-    """
+
     import stparser
     mm = stparser.MapManager()
-    level = mm.get_map("levels/icy_valley.stl")
+    level = mm.get_map("levels/bonus3/hanging roof.stl")
     solid_map = level.get_combined_solid()
     controller = STMapSliceController(solid_map)
-    pf = STAStarPath(controller, 3,9)
+    pf = STAStarPath(controller, 3,12)
     furthest = pf.find_furthest_path_node()
     path = pf.get_path_from_node(furthest)
-    s = controller.get_map_as_vertical_string(path)
+    s = controller.get_map_as_vertical_string(path,True)
+    print(s)
     f = open('temp.txt', 'w')
     f.write(s)
     f.close()
-    print(furthest.x, ",", furthest.y)
-    """
        
         

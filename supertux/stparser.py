@@ -211,12 +211,23 @@ class STLevel:
                         combined[c,r] = tm.tiles[c,r]
         return combined
 
-    def get_slice(self, start_col, num_cols):
+    def get_map_size(self):
+        combined = self.get_combined_solid()
+        return combined.shape
+    
+    def get_slice(self, start_col, num_cols, rows = None):
         solid = self.get_combined_solid()
+        start_row = 0
+        num_rows = solid.shape[1]
+        if rows is not None:
+            if rows > num_rows:
+                start_row = rows - num_rows
+            num_rows = rows
+            
         slc = np.zeros((num_cols, solid.shape[1]))
         for c in range(num_cols):
-            for r in range(solid.shape[1]):
-                slc[c,r] = 1. if solid[c+start_col, r] > 0 else 0
+            for r in range(num_rows):
+                slc[c,r+start_row] = 1. if solid[c+start_col, r] > 0 else 0
         return slc
  
     def get_starting_location(self):
@@ -247,7 +258,25 @@ class MapManager:
     
     def add_map(self, map_name, level):
         self.maps[map_name] = level
-        
+
+    def slice_to_env_encoding(self, slc):
+        bits = slc.shape[0] * slc.shape[1]
+        encoded = np.reshape(slc, (bits))
+        return encoded
+
+    def env_encoding_to_slice(self, enc, rows):
+        cols = enc.shape[0] // rows
+        slc = np.reshape(enc, (cols, rows))
+        return slc
+
+"""    
+    def get_environmental_encoding_set(self, map_name, rows, cols, overlap):
+        map_to_encode = self.get_map(map_name)
+        map_size = map_to_encode.get_map_size()
+        col = 0
+        while col + cols < map_size[0]
+            slc = self.get_slice(col, cols, rows)
+"""
 
 # ***************************************************
         
