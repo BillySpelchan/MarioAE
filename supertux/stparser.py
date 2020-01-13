@@ -249,6 +249,7 @@ class MapManager:
         
     def get_map(self, map_name):
         if map_name in self.maps:
+            print("re-using map ", map_name)
             return self.maps[map_name]
         else:
             newmap = STLevel()

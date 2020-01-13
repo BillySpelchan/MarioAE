@@ -364,13 +364,13 @@ if __name__ == '__main__':
 
     import stparser
     mm = stparser.MapManager()
-    level = mm.get_map("levels/bonus3/hanging roof.stl")
+    level = mm.get_map("levels/test/burnnmelt.stl")
     solid_map = level.get_combined_solid()
     controller = STMapSliceController(solid_map)
     pf = STAStarPath(controller, 3,12)
     furthest = pf.find_furthest_path_node()
     path = pf.get_path_from_node(furthest)
-    s = controller.get_map_as_vertical_string(path,True)
+    s = controller.get_map_as_vertical_string(path,False,True)
     print(s)
     f = open('temp.txt', 'w')
     f.write(s)
