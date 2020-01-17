@@ -6,6 +6,9 @@ Created on Sat Jan 11 12:51:20 2020
 """
 
 import numpy as np
+import STModel
+import stparser
+from keras import backend as K
 
 class FindBestAutoencoder:
     def __init__(self, map_manager, rows_in_level = 36):
@@ -98,4 +101,78 @@ class FindBestAutoencoder:
                         self.rows_in_level, cols, overlap)
         return testing_set
 
-  
+    def build_and_train_model(self, cols, hidden, encode, epochs):
+        model = STModel.STModel()
+        model.create_model(cols*self.rows_in_level, hidden, encode)
+        training_set = self.get_training_set(cols)
+        model.train_model(training_set, epochs)
+        return model
+    
+    def test_model(self, model, cols):
+        total_tiles = 0
+        total_errors = 0
+        total_sky_errors = 0
+        total_ground_errors = 0
+        # actual testing    
+        testing_set = self.get_testing_set(cols)
+        for test in testing_set:
+            predict = model.clean_prediction(test)
+            comp = self.compare_env_encoding(test, predict)
+            total_tiles += (cols * self.rows_in_level)
+            total_errors += self.count_comparison_errors(comp)
+            total_sky_errors += self.count_comparison_should_be_empty_errors(comp)
+            total_ground_errors += self.count_comparison_should_be_solid_errors(comp)
+        return (total_tiles, total_errors, total_sky_errors, total_ground_errors)
+
+    def internal_write_csv_entry(self, filename, cols, hid, enc, eps, results):
+        # build csv row
+        entry = [cols,hid,enc,eps, results[0], results[1], results[2]]
+        s = ''
+        for item in entry:
+            s += str(item) + ','
+        s +=str(results[3])
+        # write row to file
+        f = open(filename, 'a')
+        f.write(s)
+        f.write('\n')
+        f.close()
+        # return csv row as string
+        return s
+        
+    
+    def perform_baseline_test(self, csv_filename = "temp.csv"):        
+        for c in range(1,37):
+            for e in range(3):
+                model = self.build_and_train_model(c, c*18, c*9, e*50)
+                results = fba.test_model(model, c)
+                print(c,' @ ' , e, ' results ', results)
+                self.internal_write_csv_entry(csv_filename, c, c*18, c*9, e*50, results)
+                K.clear_session()
+                del model
+
+    def perform_batch_test(self, col, epoch, csv_filename = "temp.csv"):
+        bits = col * self.rows_in_level
+        step = bits//10 # 10% step
+        for hidden in range(bits//5, bits-1,step):
+            for encode in range(bits//20, hidden, step):
+                model = self.build_and_train_model(col, hidden, encode, epoch)
+                results = fba.test_model(model, col)
+                s = self.internal_write_csv_entry(csv_filename, col, hidden, encode, epoch, results)
+                print(s)
+                K.clear_session()
+                del model
+                    
+if __name__ == '__main__':
+    mm = stparser.MapManager()
+    fba = FindBestAutoencoder(mm)
+    for indx in range(3,5):
+        fba.perform_batch_test(indx,100)
+        fba.perform_batch_test(indx,150)
+        fba.perform_batch_test(indx,200)
+    for indx in range(7,37):
+        fba.perform_batch_test(indx,100)
+        fba.perform_batch_test(indx,150)
+        fba.perform_batch_test(indx,200)
+
+
+               

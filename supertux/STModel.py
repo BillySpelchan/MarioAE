@@ -41,9 +41,9 @@ class STModel:
         prediction = self.model.predict(slc.reshape((1,self.input_size)), batch_size=1)
         return prediction
 
-    def clean_prediction(self, prediction = None):
+    def clean_prediction(self, slc, prediction = None):
         if prediction is None:
-            prediction = self.predict_slice()
+            prediction = self.predict_slice(slc)
         cleaned = np.zeros(prediction.shape[1])
         for indx in range(prediction.shape[1]):
             if (prediction[0,indx] > 0):

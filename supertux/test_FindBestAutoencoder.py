@@ -11,6 +11,17 @@ import STEvaluator
 
 import FindBestAutoencoder
 
+
+class MochModel:
+    def clean_prediction(self, slc, prediction = None):
+        predict = np.copy(slc)
+        for r in range(slc.shape[0]):
+            if r%2==1:
+                predict[r] = slc[r]
+            else:
+                predict[r] = 1 if slc[r] == 0 else 0
+        return predict
+
 class TestFindBestAutoencoder(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -42,7 +53,8 @@ class TestFindBestAutoencoder(unittest.TestCase):
         self.assertEqual(fba.count_comparison_errors(expected), 5)
         self.assertEqual(fba.count_comparison_should_be_empty_errors(expected), 3)
         self.assertEqual(fba.count_comparison_should_be_solid_errors(expected), 2)
-            
+    
+    """            
     def test_get_training_set(self):
         fba = FindBestAutoencoder.FindBestAutoencoder(self.mm)
         training_set = fba.get_training_set()
@@ -72,6 +84,26 @@ class TestFindBestAutoencoder(unittest.TestCase):
         print("testing set 36 col shape is ", testing_set.shape )
         self.assertGreater(testing_set.shape[0], 1)
         self.assertEqual(testing_set.shape[1], 36*36)
+    
+    def test_build_and_train_model(self):
+        fba = FindBestAutoencoder.FindBestAutoencoder(self.mm)
+        model = fba.build_and_train_model(1, 16, 8, 100)
+        self.assertIsNotNone(model)
+        slc = np.array([1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1])
+        predict = model.clean_prediction(slc)
+        print(predict)
+        comp = fba.compare_env_encoding(slc, predict)
+        self.assertLess(fba.count_comparison_errors(comp), 36)
+    """ 
+
+    def test_test_model(self):
+        fba = FindBestAutoencoder.FindBestAutoencoder(self.mm)
+        model = MochModel()
+        results = fba.test_model(model, 1)
+        print("test model results: ", results) # (tiles, errors, skyerr, grderr) 
+        self.assertGreater(results[0], 1)
+        self.assertGreater(results[1], 1)
+        self.assertEqual(results[2]+results[3], results[1])
         
         
     @classmethod
