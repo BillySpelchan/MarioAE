@@ -382,8 +382,47 @@ class TestSTAStarPath(unittest.TestCase):
         astar = STEvaluator.STAStarPath(mc, 0,5)
         path = astar.find_path()
         self.assertIsNotNone(path)
+
+    def test_blocked_path(self):
+        slc = np.array([[1,0,0,0,0,0,1],[1,0,0,0,0,0,1],[1,0,0,0,0,0,1],
+               [1,0,0,0,0,0,1],[1,1,1,1,1,1,1],[0,0,0,0,0,0,1],
+               [0,0,0,0,0,0,1] ])
+        mc = STEvaluator.STMapSliceController(slc)
+        astar = STEvaluator.STAStarPath(mc, 0,5)
+        path = astar.find_path()
+        self.assertEqual(path, [])
+        node = astar.find_furthest_path_node()
+        self.assertEqual(node.x, 3)
+
+    def test_complex_path(self):
+        slc = np.array([ [0,0,0,0,0,0,1],[0,0,0,0,0,0,1],[0,0,0,0,0,0,1],
+                [0,0,0,0,0,0,1],[1,0,0,0,0,0,1],[1,0,0,1,0,0,0],
+                [1,0,0,1,0,0,0],[1,0,0,1,0,0,0],[1,0,0,1,0,0,0],
+                [1,0,0,0,0,0,0],[1,0,0,0,0,0,0],[1,0,0,0,0,0,0],
+                [1,0,0,0,0,0,0],[1,0,0,0,0,0,0],[0,0,0,0,0,0,1],
+                [0,0,0,0,0,0,1],[0,0,0,0,0,0,1], [0,0,0,0,0,0,1] ])
+        mc = STEvaluator.STMapSliceController(slc)
+        astar = STEvaluator.STAStarPath(mc, 0,5)
+        node = astar.find_furthest_path_node()
+        self.assertEqual(node.x, 17)
+
+    def test_generating_path_map(self):
+        pathxy = [(1,5), (2,4),(2,3),(2,2), (2,1),(2,0), (3,3), (4,3),(5,3)]
+        path = []
+        for point in pathxy:
+            node = STEvaluator.STANode()
+            node.x = point[0]
+            node.y = point[1]
+            path.append(node)
+        mc = STEvaluator.STMapSliceController()
+        astar = STEvaluator.STAStarPath(mc, 0,5)
+        slc = astar.build_path_slice(6,6,path)
+        print(slc)
+        for point in pathxy:
+            self.assertEqual(slc[point[0], point[1]], 1)
         
-        
+            
+            
     
 if __name__ == '__main__':
     unittest.main()

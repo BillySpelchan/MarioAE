@@ -300,7 +300,13 @@ class STAStarPath:
         reaching the end automatically being furthest reaching. Some levels 
         may not be completable due to a variety of reasons such as backtracking
         or platforms or other use of tiles that appear to be impassible when
-        they are not.
+        they are not.        
+
+        Returns
+        -------
+        furthest : STANode
+            Furthest reaching node in attempted path.
+
         """
         start = STANode()
         start.setLocation(self.start_x, self.start_y, True)
@@ -338,29 +344,35 @@ class STAStarPath:
         else:
             return []
     
+    def build_path_slice(self, num_col, num_row, path=None):
+        """
+        Generates a binary matrix with shape (num_col,num_row) that
+        sets the coordinate cell to 1 for cells path node is in and
+        0 for every other tile. May want to move this to separate 
+        class as only partially related to generating a* path.
+
+        Parameters
+        ----------
+        num_col : int 
+            number of columns resulting slice will have.
+        num_row : int
+            nuber of rows resulting slice will have
+        path : TYPE, optional
+            DESCRIPTION. The default is None.
+
+        Returns
+        -------
+        numpy matrix of provided size with path set as 1 cells.
+        """
+        slc = np.zeros((num_col, num_row))
+        for node in path:
+            slc[node.x, node.y] = 1
+        return slc
+    
+    
 # PROTOTYPING WORK
         
 if __name__ == '__main__':
-    MAP_WALKING = [[0,0,0,0,0,0,1],[0,0,0,0,0,0,1],[0,0,0,0,0,0,1],
-               [0,0,0,0,0,0,1],[0,0,0,0,0,0,1],[0,0,0,0,0,0,1],
-               [0,0,0,0,0,0,1] ]
-    MAP_BLOCKED = [[0,0,0,0,0,0,1],[0,0,0,0,0,0,1],[0,0,0,0,0,0,1],
-               [0,0,0,0,0,0,1],[1,1,1,1,1,1,1],[0,0,0,0,0,0,1],
-               [0,0,0,0,0,0,1] ]
-    COMPLEX_PATH = [ [0,0,0,0,0,0,1],[0,0,0,0,0,0,1],[0,0,0,0,0,0,1],
-                [0,0,0,0,0,0,1],[1,0,0,0,0,0,1],[1,0,0,1,0,0,0],
-                [1,0,0,1,0,0,0],[1,0,0,1,0,0,0],[1,0,0,1,0,0,0],
-                [1,0,0,0,0,0,0],[1,0,0,0,0,0,0],[1,0,0,0,0,0,0],
-                [1,0,0,0,0,0,0],[1,0,0,0,0,0,0],[0,0,0,0,0,0,1],
-                [0,0,0,0,0,0,1],[0,0,0,0,0,0,1], [0,0,0,0,0,0,1] ]
-
-    #slc = np.array(MAP_WALKING)
-    #slc = np.array(MAP_BLOCKED)
-    slc = np.array(COMPLEX_PATH)
-    controller = STMapSliceController(slc)
-    pf = STAStarPath(controller, 0,5)
-    path = pf.find_path()
-    controller.print_map(path)
 
     import stparser
     mm = stparser.MapManager()
