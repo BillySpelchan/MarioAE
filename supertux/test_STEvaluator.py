@@ -417,11 +417,24 @@ class TestSTAStarPath(unittest.TestCase):
         mc = STEvaluator.STMapSliceController()
         astar = STEvaluator.STAStarPath(mc, 0,5)
         slc = astar.build_path_slice(6,6,path)
-        print(slc)
+        #print(slc)
         for point in pathxy:
             self.assertEqual(slc[point[0], point[1]], 1)
         
-            
+    def test_get_path_encoding_set(self):
+        slc = np.array([ [0,0,0,0,0,0,1],[0,0,0,0,0,0,1],[0,0,0,0,0,0,1],
+                [0,0,0,0,0,0,1],[1,0,0,0,0,0,1],[1,0,0,1,0,0,0],
+                [1,0,0,1,0,0,0],[1,0,0,1,0,0,0],[1,0,0,1,0,0,0],
+                [1,0,0,0,0,0,0],[1,0,0,0,0,0,0],[1,0,0,0,0,0,0],
+                [1,0,0,0,0,0,0],[1,0,0,0,0,0,0],[0,0,0,0,0,0,1],
+                [0,0,0,0,0,0,1],[0,0,0,0,0,0,1], [0,0,0,0,0,0,1] ])
+        mc = STEvaluator.STMapSliceController(slc)
+        astar = STEvaluator.STAStarPath(mc, 0,5)
+        test_set = astar.get_path_encoding_set(7, 5,True)
+        print(test_set)
+        self.assertEqual(test_set.shape[0],14)
+        self.assertEqual(test_set.shape[1],35)
+           
             
     
 if __name__ == '__main__':

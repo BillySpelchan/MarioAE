@@ -96,6 +96,21 @@ class TestFindBestAutoencoder(unittest.TestCase):
         self.assertLess(fba.count_comparison_errors(comp), 36)
     """ 
 
+    def test_get_path_training_set(self):
+        fba = FindBestAutoencoder.FindBestAutoencoder(self.mm)
+        training_set = fba.get_path_training_set()
+        print("path training set 8 col shape is ", training_set.shape )
+        self.assertGreater(training_set.shape[0], 1)
+        self.assertEqual(training_set.shape[1], 35*8)
+        training_set = fba.get_path_training_set(4)
+        print("path training set 4 col shape is ", training_set.shape )
+        self.assertGreater(training_set.shape[0], 1)
+        self.assertEqual(training_set.shape[1], 35*4)
+        training_set = fba.get_path_training_set(36)
+        print("path training set 36 col shape is ", training_set.shape )
+        self.assertGreater(training_set.shape[0], 1)
+        self.assertEqual(training_set.shape[1], 35*36)
+
     def test_test_model(self):
         fba = FindBestAutoencoder.FindBestAutoencoder(self.mm)
         model = MochModel()

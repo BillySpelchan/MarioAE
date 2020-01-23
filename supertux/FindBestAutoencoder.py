@@ -8,6 +8,7 @@ Created on Sat Jan 11 12:51:20 2020
 import numpy as np
 import STModel
 import stparser
+import STEvaluator
 from keras import backend as K
 
 class FindBestAutoencoder:
@@ -161,18 +162,72 @@ class FindBestAutoencoder:
                 print(s)
                 K.clear_session()
                 del model
-                    
-if __name__ == '__main__':
-    mm = stparser.MapManager()
-    fba = FindBestAutoencoder(mm)
-    for indx in range(3,5):
-        fba.perform_batch_test(indx,100)
-        fba.perform_batch_test(indx,150)
-        fba.perform_batch_test(indx,200)
-    for indx in range(7,37):
-        fba.perform_batch_test(indx,100)
-        fba.perform_batch_test(indx,150)
-        fba.perform_batch_test(indx,200)
+  
 
+     # --------------------
+
+
+    def get_path_encoding_sets(self, map_names, cols, overlap):
+        enc_set = None
+        for map_name in map_names:
+            level = self.mm.get_map(map_name)
+            solid_map = level.get_combined_solid()
+            controller = STEvaluator.STMapSliceController(solid_map)
+            start = level.get_starting_location()
+            astar = STEvaluator.STAStarPath(controller, int(start[0]), int(start[1]))
+            enc = astar.get_path_encoding_set(controller.get_num_rows(), cols, overlap)
+            if enc_set is not None:
+                enc_set = np.append(enc_set, enc, axis=0)
+            else:
+                enc_set = enc
+        return enc_set
+
+    def get_path_training_set(self, cols=8, overlap=True):
+        training_set = self.get_path_encoding_sets(\
+                        [ "levels/bonus3/but_no_one_can_stop_it.stl",                        
+                        "levels/bonus3/crystal sunset.stl",
+                        "levels/bonus3/hanging roof.stl",
+                        "levels/test/burnnmelt.stl ",
+                        "levels/test/short_fuse.stl",
+                        "levels/test/spike.stl",
+                        "levels/test/tilemap_disco.stl",
+                        "levels/test_old/auto.stl",
+                        "levels/world1/frosted_fields.stl",
+                        "levels/world1/somewhat_smaller_bath.stl",
+                        "levels/world1/yeti_cutscene.stl"], 
+                        cols, overlap)
+                        #self.rows_in_level, cols, overlap)
+        return training_set
+    
+    
+""" TODO
+    def build_and_train_path_model(self, cols, hidden, encode, epochs):
+        model = STModel.STModel()
+        model.create_model(cols*self.rows_in_level, hidden, encode)
+        training_set = self.get_path_training_set(cols)
+        model.train_model(training_set, epochs)
+        return model
+    
+    def test_path_model(self, model, cols):
+        total_tiles = 0
+        total_errors = 0
+        total_sky_errors = 0
+        total_ground_errors = 0
+        # actual testing    
+        testing_set = self.get_testing_set(cols)
+        for test in testing_set:
+            predict = model.clean_prediction(test)
+            comp = self.compare_env_encoding(test, predict)
+            total_tiles += (cols * self.rows_in_level)
+            total_errors += self.count_comparison_errors(comp)
+            total_sky_errors += self.count_comparison_should_be_empty_errors(comp)
+            total_ground_errors += self.count_comparison_should_be_solid_errors(comp)
+        return (total_tiles, total_errors, total_sky_errors, total_ground_errors)
+"""                  
+if __name__ == '__main__':
+    #mm = stparser.MapManager()
+    #fba = FindBestAutoencoder(mm)
+    #fba.perform_batch_test(7,200)
+    print("Please run tests until we are ready")
 
                

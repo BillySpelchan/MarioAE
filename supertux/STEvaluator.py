@@ -205,6 +205,9 @@ class STMapSliceController:
     def get_num_columns(self):
         return self.current_slice.shape[0]
     
+    def get_num_rows(self):
+        return self.current_slice.shape[1]
+    
     def can_enter(self, x, y):
         if x < 0: return False
         if x >= self.current_slice.shape[0]: return False
@@ -344,7 +347,7 @@ class STAStarPath:
         else:
             return []
     
-    def build_path_slice(self, num_col, num_row, path=None):
+    def build_path_slice(self, num_col, num_row, path):
         """
         Generates a binary matrix with shape (num_col,num_row) that
         sets the coordinate cell to 1 for cells path node is in and
@@ -357,7 +360,7 @@ class STAStarPath:
             number of columns resulting slice will have.
         num_row : int
             nuber of rows resulting slice will have
-        path : TYPE, optional
+        path : array of STANode
             DESCRIPTION. The default is None.
 
         Returns
@@ -368,7 +371,28 @@ class STAStarPath:
         for node in path:
             slc[node.x, node.y] = 1
         return slc
-    
+ 
+    def get_path_encoding_set(self, rows, cols, overlap):
+        node = self.find_furthest_path_node()
+        path = self.get_path_from_node(node)
+        num_cols = node.x + 1
+        full_slice = self.build_path_slice(num_cols, rows, path)
+
+        col = 0
+        enc_set = None
+        while col + cols <= num_cols:
+            slc = full_slice[col:col+cols,]
+            enc = np.reshape(slc, (1,rows*cols))
+            if enc_set is not None:
+                enc_set = np.append(enc_set, enc, axis=0)
+            else:
+                enc_set = enc
+            if overlap:
+                col += 1
+            else:
+                col += cols
+        return enc_set
+
     
 # PROTOTYPING WORK
         
