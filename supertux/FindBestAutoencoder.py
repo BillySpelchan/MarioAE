@@ -16,6 +16,22 @@ class FindBestAutoencoder:
         self.rows_in_level = rows_in_level
         self.mm = map_manager
 
+    TRAINING_SET = [ "levels/bonus3/but_no_one_can_stop_it.stl",                        
+                        "levels/bonus3/crystal sunset.stl",
+                        "levels/bonus3/hanging roof.stl",
+                        "levels/test/burnnmelt.stl ",
+                        "levels/test/short_fuse.stl",
+                        "levels/test/spike.stl",
+                        "levels/test/tilemap_disco.stl",
+                        "levels/test_old/auto.stl",
+                        "levels/world1/frosted_fields.stl",
+                        "levels/world1/somewhat_smaller_bath.stl",
+                        "levels/world1/yeti_cutscene.stl"]
+    
+    TESTING_SET = [ "levels/bonus3/Global_Warming.stl",
+                        "levels/incubator/fall_kugelblitz.stl",
+                        "levels/test_old/water.stl",
+                        "levels/world2/besides_bushes.stl"]
     """
         compares encodings returning a np byte matrix with 
             0 = both match with empty
@@ -79,26 +95,13 @@ class FindBestAutoencoder:
 
     def get_training_set(self, cols=8, overlap=True):
         training_set = self.mm.get_env_encoding_sets(\
-                        [ "levels/bonus3/but_no_one_can_stop_it.stl",
-                        "levels/bonus3/crystal sunset.stl",
-                        "levels/bonus3/hanging roof.stl",
-                        "levels/test/burnnmelt.stl ",
-                        "levels/test/short_fuse.stl",
-                        "levels/test/spike.stl",
-                        "levels/test/tilemap_disco.stl",
-                        "levels/test_old/auto.stl",
-                        "levels/world1/frosted_fields.stl",
-                        "levels/world1/somewhat_smaller_bath.stl",
-                        "levels/world1/yeti_cutscene.stl"], 
+                        self.TRAINING_SET, 
                         self.rows_in_level, cols, overlap)
         return training_set
 
     def get_testing_set(self, cols=8, overlap=False):
         testing_set = self.mm.get_env_encoding_sets(\
-                        [ "levels/bonus3/Global_Warming.stl",
-                        "levels/incubator/fall_kugelblitz.stl",
-                        "levels/test_old/water.stl",
-                        "levels/world2/besides_bushes.stl",], 
+                        self.TESTING_SET, 
                         self.rows_in_level, cols, overlap)
         return testing_set
 
@@ -145,7 +148,7 @@ class FindBestAutoencoder:
         for c in range(1,37):
             for e in range(3):
                 model = self.build_and_train_model(c, c*18, c*9, e*50)
-                results = fba.test_model(model, c)
+                results = self.test_model(model, c)
                 print(c,' @ ' , e, ' results ', results)
                 self.internal_write_csv_entry(csv_filename, c, c*18, c*9, e*50, results)
                 K.clear_session()
@@ -157,7 +160,7 @@ class FindBestAutoencoder:
         for hidden in range(bits//5, bits-1,step):
             for encode in range(bits//20, hidden, step):
                 model = self.build_and_train_model(col, hidden, encode, epoch)
-                results = fba.test_model(model, col)
+                results = self.test_model(model, col)
                 s = self.internal_write_csv_entry(csv_filename, col, hidden, encode, epoch, results)
                 print(s)
                 K.clear_session()
@@ -167,7 +170,7 @@ class FindBestAutoencoder:
      # --------------------
 
 
-    def get_path_encoding_sets(self, map_names, cols, overlap):
+    def get_path_encoding_sets(self, map_names, rows, cols, overlap):
         enc_set = None
         for map_name in map_names:
             level = self.mm.get_map(map_name)
@@ -175,7 +178,7 @@ class FindBestAutoencoder:
             controller = STEvaluator.STMapSliceController(solid_map)
             start = level.get_starting_location()
             astar = STEvaluator.STAStarPath(controller, int(start[0]), int(start[1]))
-            enc = astar.get_path_encoding_set(controller.get_num_rows(), cols, overlap)
+            enc = astar.get_path_encoding_set(rows, cols, overlap, rows - controller.get_num_rows())
             if enc_set is not None:
                 enc_set = np.append(enc_set, enc, axis=0)
             else:
@@ -184,23 +187,17 @@ class FindBestAutoencoder:
 
     def get_path_training_set(self, cols=8, overlap=True):
         training_set = self.get_path_encoding_sets(\
-                        [ "levels/bonus3/but_no_one_can_stop_it.stl",                        
-                        "levels/bonus3/crystal sunset.stl",
-                        "levels/bonus3/hanging roof.stl",
-                        "levels/test/burnnmelt.stl ",
-                        "levels/test/short_fuse.stl",
-                        "levels/test/spike.stl",
-                        "levels/test/tilemap_disco.stl",
-                        "levels/test_old/auto.stl",
-                        "levels/world1/frosted_fields.stl",
-                        "levels/world1/somewhat_smaller_bath.stl",
-                        "levels/world1/yeti_cutscene.stl"], 
-                        cols, overlap)
-                        #self.rows_in_level, cols, overlap)
+                        self.TRAINING_SET, 
+                        self.rows_in_level, cols, overlap)
         return training_set
     
-    
-""" TODO
+    def get_path_testing_set(self, cols=8, overlap=False):
+        testing_set = self.get_path_encoding_sets(\
+                        self.TESTING_SET, 
+                        self.rows_in_level, cols, overlap)
+        return testing_set
+   
+
     def build_and_train_path_model(self, cols, hidden, encode, epochs):
         model = STModel.STModel()
         model.create_model(cols*self.rows_in_level, hidden, encode)
@@ -214,20 +211,89 @@ class FindBestAutoencoder:
         total_sky_errors = 0
         total_ground_errors = 0
         # actual testing    
-        testing_set = self.get_testing_set(cols)
+        testing_set = self.get_path_testing_set(cols)
         for test in testing_set:
             predict = model.clean_prediction(test)
             comp = self.compare_env_encoding(test, predict)
-            total_tiles += (cols * self.rows_in_level)
+            total_tiles += (cols * 35)
             total_errors += self.count_comparison_errors(comp)
             total_sky_errors += self.count_comparison_should_be_empty_errors(comp)
             total_ground_errors += self.count_comparison_should_be_solid_errors(comp)
         return (total_tiles, total_errors, total_sky_errors, total_ground_errors)
-"""                  
-if __name__ == '__main__':
-    #mm = stparser.MapManager()
-    #fba = FindBestAutoencoder(mm)
+
+
+     # --------------------
+
+    def get_mixed_training_set(self, cols=8, overlap=True):      
+        env_training_set = self.mm.get_env_encoding_sets(\
+                        self.TRAINING_SET, 
+                        self.rows_in_level, cols, overlap)
+        path_training_set = self.get_path_encoding_sets(\
+                        self.TRAINING_SET, 
+                        self.rows_in_level, cols, overlap)
+        training_set = np.zeros((env_training_set.shape[0], cols*2*self.rows_in_level))
+        for indx in range(env_training_set.shape[0]):
+            for tile in range(cols*self.rows_in_level):
+                training_set[indx][tile] = env_training_set[indx][tile]
+                training_set[indx][tile+cols*self.rows_in_level] = path_training_set[indx][tile]
+            
+        return training_set
+
+    
+    def get_mixed_testing_set(self, cols=8, overlap=False):
+        env_testing_set = self.mm.get_env_encoding_sets(\
+                        self.TESTING_SET, 
+                        self.rows_in_level, cols, overlap)
+        path_testing_set = self.get_path_encoding_sets(\
+                        self.TESTING_SET, 
+                        self.rows_in_level, cols, overlap)
+        testing_set = np.zeros((env_testing_set.shape[0], cols*2*self.rows_in_level))
+        for indx in range(env_testing_set.shape[0]):
+            for tile in range(cols*self.rows_in_level):
+                testing_set[indx][tile] = env_testing_set[indx][tile]
+                testing_set[indx][tile+cols*self.rows_in_level] = path_testing_set[indx][tile]
+            
+        return testing_set
+
+    def build_and_train_mixed_model(self, cols, hidden, encode, epochs):
+        model = STModel.STModel()
+        model.create_model(cols*self.rows_in_level*2, hidden, encode)
+        training_set = self.get_mixed_training_set(cols)
+        model.train_model(training_set, epochs)
+        return model
+    
+    def test_mixed_model(self, model, cols):
+        total_tiles = 0
+        total_errors = 0
+        total_sky_errors = 0
+        total_ground_errors = 0
+        # actual testing    
+        testing_set = self.get_mixed_testing_set(cols)
+        for test in testing_set:
+            predict = model.clean_prediction(test)
+            comp = self.compare_env_encoding(test, predict)
+            total_tiles += (cols * self.rows_in_level * 2)
+            total_errors += self.count_comparison_errors(comp)
+            total_sky_errors += self.count_comparison_should_be_empty_errors(comp)
+            total_ground_errors += self.count_comparison_should_be_solid_errors(comp)
+        return (total_tiles, total_errors, total_sky_errors, total_ground_errors)
+  
+
+
+def test_autoencoding_paths():
+    mm = stparser.MapManager()
+    fba = FindBestAutoencoder(mm)
     #fba.perform_batch_test(7,200)
-    print("Please run tests until we are ready")
+    print("Building model")
+    model = fba.build_and_train_path_model(7, 140, 70, 200)
+    print(fba.test_path_model(model, 7))    
+               
+if __name__ == '__main__':
+    #test_autoencoding_paths()
+    mm = stparser.MapManager()
+    fba = FindBestAutoencoder(mm)
+    print("Building model")
+    model = fba.build_and_train_mixed_model(7, 140, 70, 200)
+    print(fba.test_mixed_model(model, 7))    
 
                

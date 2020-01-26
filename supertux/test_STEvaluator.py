@@ -431,9 +431,13 @@ class TestSTAStarPath(unittest.TestCase):
         mc = STEvaluator.STMapSliceController(slc)
         astar = STEvaluator.STAStarPath(mc, 0,5)
         test_set = astar.get_path_encoding_set(7, 5,True)
-        print(test_set)
+        #print(test_set)
         self.assertEqual(test_set.shape[0],14)
         self.assertEqual(test_set.shape[1],35)
+        test_set = astar.get_path_encoding_set(8, 5,True, 1)
+        print(test_set)
+        self.assertEqual(test_set.shape[0],14)
+        self.assertEqual(test_set.shape[1],40)
            
             
     

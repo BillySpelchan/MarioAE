@@ -94,22 +94,39 @@ class TestFindBestAutoencoder(unittest.TestCase):
         print(predict)
         comp = fba.compare_env_encoding(slc, predict)
         self.assertLess(fba.count_comparison_errors(comp), 36)
-    """ 
+     
 
     def test_get_path_training_set(self):
         fba = FindBestAutoencoder.FindBestAutoencoder(self.mm)
         training_set = fba.get_path_training_set()
         print("path training set 8 col shape is ", training_set.shape )
         self.assertGreater(training_set.shape[0], 1)
-        self.assertEqual(training_set.shape[1], 35*8)
+        self.assertEqual(training_set.shape[1], fba.rows_in_level*8)
         training_set = fba.get_path_training_set(4)
         print("path training set 4 col shape is ", training_set.shape )
         self.assertGreater(training_set.shape[0], 1)
-        self.assertEqual(training_set.shape[1], 35*4)
+        self.assertEqual(training_set.shape[1], fba.rows_in_level*4)
         training_set = fba.get_path_training_set(36)
         print("path training set 36 col shape is ", training_set.shape )
         self.assertGreater(training_set.shape[0], 1)
-        self.assertEqual(training_set.shape[1], 35*36)
+        self.assertEqual(training_set.shape[1], fba.rows_in_level*36)
+    """
+
+    def test_get_mixed_training_set(self):
+        fba = FindBestAutoencoder.FindBestAutoencoder(self.mm)
+        training_set = fba.get_mixed_training_set()
+        print("path training set 8 col shape is ", training_set.shape )
+        self.assertGreater(training_set.shape[0], 1)
+        self.assertEqual(training_set.shape[1], fba.rows_in_level*8*2)
+        training_set = fba.get_mixed_training_set(4)
+        print("path training set 4 col shape is ", training_set.shape )
+        self.assertGreater(training_set.shape[0], 1)
+        self.assertEqual(training_set.shape[1], fba.rows_in_level*4*2)
+        training_set = fba.get_mixed_training_set(36)
+        print("path training set 36 col shape is ", training_set.shape )
+        self.assertGreater(training_set.shape[0], 1)
+        self.assertEqual(training_set.shape[1], fba.rows_in_level*36*2)
+
 
     def test_test_model(self):
         fba = FindBestAutoencoder.FindBestAutoencoder(self.mm)
@@ -120,6 +137,8 @@ class TestFindBestAutoencoder(unittest.TestCase):
         self.assertGreater(results[1], 1)
         self.assertEqual(results[2]+results[3], results[1])
         
+
+
         
     @classmethod
     def tearDownClass(cls):

@@ -347,7 +347,7 @@ class STAStarPath:
         else:
             return []
     
-    def build_path_slice(self, num_col, num_row, path):
+    def build_path_slice(self, num_col, num_row, path, row_adjust = 0):
         """
         Generates a binary matrix with shape (num_col,num_row) that
         sets the coordinate cell to 1 for cells path node is in and
@@ -361,22 +361,27 @@ class STAStarPath:
         num_row : int
             nuber of rows resulting slice will have
         path : array of STANode
-            DESCRIPTION. The default is None.
-
+            a list containing the path that will make up the path slice
+        row_adjust : int 
+            DEFAULT 0 this is used when the map row size is different from 
+            the desired slice size (the case where you are using a
+            lower row map and adding padding to the top) and is simply the
+            size difference.
         Returns
         -------
         numpy matrix of provided size with path set as 1 cells.
         """
         slc = np.zeros((num_col, num_row))
+        
         for node in path:
-            slc[node.x, node.y] = 1
+            slc[node.x, node.y+row_adjust] = 1
         return slc
  
-    def get_path_encoding_set(self, rows, cols, overlap):
+    def get_path_encoding_set(self, rows, cols, overlap, row_adjust = 0):
         node = self.find_furthest_path_node()
         path = self.get_path_from_node(node)
         num_cols = node.x + 1
-        full_slice = self.build_path_slice(num_cols, rows, path)
+        full_slice = self.build_path_slice(num_cols, rows, path, row_adjust)
 
         col = 0
         enc_set = None
