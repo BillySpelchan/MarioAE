@@ -277,9 +277,46 @@ class FindBestAutoencoder:
             total_sky_errors += self.count_comparison_should_be_empty_errors(comp)
             total_ground_errors += self.count_comparison_should_be_solid_errors(comp)
         return (total_tiles, total_errors, total_sky_errors, total_ground_errors)
+
+    def test_mixed_model_environment(self, model, cols):
+        total_tiles = 0
+        total_errors = 0
+        total_sky_errors = 0
+        total_ground_errors = 0
+        # actual testing    
+        testing_set = self.get_mixed_testing_set(cols)
+        for test in testing_set:
+            predict = model.clean_prediction(test)
+            comp = self.compare_env_encoding(test[0:cols*self.rows_in_level], predict[0:cols*self.rows_in_level])
+            total_tiles += (cols * self.rows_in_level)
+            total_errors += self.count_comparison_errors(comp)
+            total_sky_errors += self.count_comparison_should_be_empty_errors(comp)
+            total_ground_errors += self.count_comparison_should_be_solid_errors(comp)
+        return (total_tiles, total_errors, total_sky_errors, total_ground_errors)
+        
+
+    def perform_baseline_mixed_test(self, csv_filename = "mixed.csv"):        
+        for c in range(1,37):
+            for e in range(3):
+                model = self.build_and_train_mixed_model(c, c*36, c*18, e*100+100)
+                results = self.test_mixed_model_environment(model, c)
+                print(c,' @ ' , e, ' results ', results)
+                self.internal_write_csv_entry(csv_filename, c, c*36, c*18, e*100*+100, results)
+                K.clear_session()
+                del model
+
+    def perform_batch_mixed_test(self, col, epoch, csv_filename = "mixed.csv"):
+        bits = col * self.rows_in_level * 2
+        step = bits//10 # 10% step
+        for hidden in range(bits//5, bits-1,step):
+            for encode in range(bits//20, hidden, step):
+                model = self.build_and_train_mixed_model(col, hidden, encode, epoch)
+                results = self.test_mixed_model_environment(model, col)
+                s = self.internal_write_csv_entry(csv_filename, col, hidden, encode, epoch, results)
+                print(s)
+                K.clear_session()
+                del model
   
-
-
 def test_autoencoding_paths():
     mm = stparser.MapManager()
     fba = FindBestAutoencoder(mm)
@@ -287,13 +324,22 @@ def test_autoencoding_paths():
     print("Building model")
     model = fba.build_and_train_path_model(7, 140, 70, 200)
     print(fba.test_path_model(model, 7))    
-               
-if __name__ == '__main__':
-    #test_autoencoding_paths()
+    
+def test_mixed_autoencoder():
     mm = stparser.MapManager()
     fba = FindBestAutoencoder(mm)
     print("Building model")
     model = fba.build_and_train_mixed_model(7, 140, 70, 200)
-    print(fba.test_mixed_model(model, 7))    
+    print("mixed model results: ", fba.test_mixed_model(model, 7))    
+    print("mixed model environment only results: ", fba.test_mixed_model_environment(model, 7))    
+    
+if __name__ == '__main__':
+    #test_autoencoding_paths()
+    mm = stparser.MapManager()
+    fba = FindBestAutoencoder(mm)
+    for cols in range(21,26):#do 26-31 and 31-37 when get back 
+        fba.perform_batch_mixed_test(cols, 200)
+    
+  
 
                
