@@ -316,6 +316,54 @@ class FindBestAutoencoder:
                 print(s)
                 K.clear_session()
                 del model
+                
+    # -----------------------
+
+    def build_and_train_path_to_env_model(self, cols, hidden, encode, epochs):
+        model = STModel.STModel()
+        model.create_model(cols*self.rows_in_level, hidden, encode)
+        out_set = self.mm.get_env_encoding_sets(\
+                        self.TRAINING_SET, 
+                        self.rows_in_level, cols, True)
+        in_set = self.get_path_encoding_sets(\
+                        self.TRAINING_SET, 
+                        self.rows_in_level, cols, True)
+        
+        model.train_for_different_output(in_set, out_set, epochs)
+        return model
+
+    def test_path_to_env_model(self, model, cols):
+        total_tiles = 0
+        total_errors = 0
+        total_sky_errors = 0
+        total_ground_errors = 0
+        # actual testing    
+        out_set = self.mm.get_env_encoding_sets(\
+                        self.TESTING_SET, 
+                        self.rows_in_level, cols, True)
+        in_set = self.get_path_encoding_sets(\
+                        self.TESTING_SET, 
+                        self.rows_in_level, cols, True)
+        for indx in range (len(out_set)):
+            test = in_set[indx]
+            predict = model.clean_prediction(test)
+            comp = self.compare_env_encoding(out_set[indx], predict)
+            total_tiles += (cols * self.rows_in_level)
+            total_errors += self.count_comparison_errors(comp)
+            total_sky_errors += self.count_comparison_should_be_empty_errors(comp)
+            total_ground_errors += self.count_comparison_should_be_solid_errors(comp)
+        return (total_tiles, total_errors, total_sky_errors, total_ground_errors)
+     
+    def perform_baseline_path_to_env_test(self, csv_filename = "p2e.csv"):
+        for c in range(1,37):
+            for e in range(3):
+                model = self.build_and_train_path_to_env_model(c, c*36, c*18, e*100+150)
+                results = self.test_path_to_env_model(model, c)
+                print(c,' @ ' , e, ' results ', results)
+                self.internal_write_csv_entry(csv_filename, c, c*36, c*18, e*100+150, results)
+                K.clear_session()
+                del model
+    
   
 def test_autoencoding_paths():
     mm = stparser.MapManager()
@@ -332,13 +380,22 @@ def test_mixed_autoencoder():
     model = fba.build_and_train_mixed_model(7, 140, 70, 200)
     print("mixed model results: ", fba.test_mixed_model(model, 7))    
     print("mixed model environment only results: ", fba.test_mixed_model_environment(model, 7))    
+
+def test_path_to_env_autoencoder():
+    mm = stparser.MapManager()
+    fba = FindBestAutoencoder(mm)
+    print("Building model")
+    model = fba.build_and_train_path_to_env_model(7, 140, 70, 400)
+    print(fba.test_path_to_env_model(model, 7))
     
 if __name__ == '__main__':
     #test_autoencoding_paths()
     mm = stparser.MapManager()
     fba = FindBestAutoencoder(mm)
-    for cols in range(21,26):#do 26-31 and 31-37 when get back 
-        fba.perform_batch_mixed_test(cols, 200)
+    fba.perform_baseline_path_to_env_test()
+     
+#    for cols in range(31,37):#do 26-31 and 31-37 when get back 
+#        fba.perform_batch_mixed_test(cols, 200)
     
   
 

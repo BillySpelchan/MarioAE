@@ -36,6 +36,9 @@ class STModel:
     
     def train_model(self, training_set, epoch ):
         self.model.fit(training_set, training_set, epochs=epoch)
+        
+    def train_for_different_output(self, in_set, out_set, epoch):
+        self.model.fit(in_set, out_set, epochs=epoch)
     
     def predict_slice(self, slc):
         prediction = self.model.predict(slc.reshape((1,self.input_size)), batch_size=1)
