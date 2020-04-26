@@ -34,11 +34,11 @@ class STModel:
         self.model.compile(optimizer='adadelta', loss='binary_crossentropy')
         return self.model
     
-    def train_model(self, training_set, epoch ):
-        self.model.fit(training_set, training_set, epochs=epoch)
+    def train_model(self, training_set, epoch, verbose = 0 ):
+        self.model.fit(training_set, training_set, epochs=epoch, verbose=verbose)
         
-    def train_for_different_output(self, in_set, out_set, epoch):
-        self.model.fit(in_set, out_set, epochs=epoch)
+    def train_for_different_output(self, in_set, out_set, epoch, verbose = 0):
+        self.model.fit(in_set, out_set, epochs=epoch, verbose = verbose)
     
     def predict_slice(self, slc):
         prediction = self.model.predict(slc.reshape((1,self.input_size)), batch_size=1)

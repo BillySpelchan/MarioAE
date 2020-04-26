@@ -10,6 +10,7 @@ import STModel
 import stparser
 import STEvaluator
 from keras import backend as K
+import matplotlib.pyplot as plt
 
 class FindBestAutoencoder:
     def __init__(self, map_manager, rows_in_level = 36):
@@ -363,6 +364,18 @@ class FindBestAutoencoder:
                 self.internal_write_csv_entry(csv_filename, c, c*36, c*18, e*100+150, results)
                 K.clear_session()
                 del model
+
+    def perform_batch_path_to_env_test(self, col, epoch, csv_filename = "p2e.csv"):
+        bits = col * self.rows_in_level
+        step = bits//10 # 10% step
+        for hidden in range(bits//5, bits-1,step):
+            for encode in range(bits//20, hidden, step):
+                model = self.build_and_train_path_to_env_model(col, hidden, encode, epoch)
+                results = self.test_path_to_env_model(model, col)
+                s = self.internal_write_csv_entry(csv_filename, col, hidden, encode, epoch, results)
+                print(s)
+                K.clear_session()
+                del model
     
   
 def test_autoencoding_paths():
@@ -387,16 +400,77 @@ def test_path_to_env_autoencoder():
     print("Building model")
     model = fba.build_and_train_path_to_env_model(7, 140, 70, 400)
     print(fba.test_path_to_env_model(model, 7))
-    
-if __name__ == '__main__':
-    #test_autoencoding_paths()
-    mm = stparser.MapManager()
-    fba = FindBestAutoencoder(mm)
-    fba.perform_baseline_path_to_env_test()
-     
-#    for cols in range(31,37):#do 26-31 and 31-37 when get back 
-#        fba.perform_batch_mixed_test(cols, 200)
-    
-  
 
-               
+
+class PlotTestResults:
+    def __init__(self):
+        pass
+
+    def load_results_csv(self, csv_file_name):
+        cols = []
+        for _ in range(37):
+            cols.append([])
+        with open(csv_file_name, 'r') as csv:
+            for line in csv:
+                data = line.split(',')
+                #col,size,hidden,epoch,tiles,error,gnd_err,sky_err
+
+                try:
+                    col = int(data[0].strip())
+                    tiles = float(data[4].strip())
+                    bad = float(data[5].strip())
+                except ValueError:
+                    print("Invalid line in csv: ", data)
+                    continue
+                if col < 0 or col > 36:
+                    col = 0
+                    print("Invalid column in csv: ", data)
+                if tiles < 1:
+                    print("Invalid tile count in csv: ", data)
+                    continue
+                cols[col].append(bad / tiles)
+        return cols
+
+
+    def generate_box_plot(self, plot_title, csv_file_name, col_start=1, col_end=36, out_file=None):
+        csv_data = self.load_results_csv(csv_file_name)
+        plot_data = []
+        for cntr in range(col_start, col_end+1):
+            plot_data.append(csv_data[cntr])
+        plt.clf()
+        plt.boxplot(plot_data)
+        plt.title(plot_title)
+        plt.xlabel("Columns")
+        plt.ylabel("Error rate")
+
+        if out_file is not None:
+            plt.savefig(out_file, dpi=600)
+        else:
+            plt.show()
+
+
+    def plottest(self):
+        xvals = np.arange(0, 10, .1)
+        plt.plot(xvals, np.sin(xvals))
+        plt.show()
+
+
+if __name__ == '__main__':
+    # test_autoencoding_paths()
+    """
+#    mm = stparser.MapManager()
+#    fba = FindBestAutoencoder(mm)
+#    fba.perform_baseline_path_to_env_test()
+     
+#    map_gen_model = fba.build_and_train_model(5, 117, 72, 150)
+#    map_gen_model.save("mapgen5_117_72.h5")
+#    for cols in range(6,7):#11):#do other ranges when idle
+#        fba.perform_batch_path_to_env_test(cols, 150)
+#        fba.perform_batch_path_to_env_test(cols, 250)
+#        fba.perform_batch_path_to_env_test(cols, 350)
+    """
+
+    ptr = PlotTestResults()
+    # ptr.plottest()
+    ptr.generate_box_plot("Autoencoder Column Error Rate", "temp.csv", 1,36)#, "baseAutoencoderBoxplot.png")
+
