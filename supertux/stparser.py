@@ -6,7 +6,8 @@ Created on Mon Dec  9 19:41:49 2019
 """
 import numpy as np
 from PIL import Image as pimg
-
+from PIL import ImageTk
+import tkinter as tk
 
 class STFormatException(Exception):
     def __init__(self, message):
@@ -121,20 +122,31 @@ class STTilemap:
         self.name = "unnamed"
         if tilemap_node is not None:
             self.set_from_tilemap_node(tilemap_node)
-        
 
+    def create_empty_level(self, width, height):
+        self.width = width
+        self.height = height
+        self.tiles = np.zeros((int(self.width), int(self.height)))
 
-    def parse_float_from_node(self, node, childname, default):
-        child = node.get_child_by_name(childname)
+    def write_slice(self, slc, col):
+        shape = slc.shape
+        num_rows = min(self.height, shape[1])
+        row_offset = max(0, self.height - shape[1])
+        for c in range(shape[0]):
+            for r in range(num_rows):
+                self.tiles[c+col,r+row_offset] = slc[c,r]
+
+    @staticmethod
+    def parse_float_from_node(node, child_name, default):
+        child = node.get_child_by_name(child_name)
         if child is None:
             return default
         try:
             val = float(child.payload)
-        except Exception:
+        except ValueError:
             val = default
         return val
-    
-    
+
     def set_from_tilemap_node(self, node):
         solid = node.get_child_by_name("solid")
         #print("debug - solid payload:", solid.payload)
@@ -175,6 +187,8 @@ class STLevel:
         if (filename is not None): self.load_level(filename)
         self.combined_solid = None
 
+    def add_tilemap(self, tilemap):
+        self.tilemaps.append(tilemap)
         
     def load_level(self, filename):
         f = open(filename, 'rt')
@@ -312,6 +326,15 @@ def generate_image_from_slice(slc):
                 img.putpixel((c,r), (255,0,255,255))
     return img
 
+
+def show_image_in_window(img):
+    root = tk.Tk()
+    photo_img = ImageTk.PhotoImage(img)
+    panel = tk.Label(root, image = photo_img)
+    panel.pack()
+    root.mainloop()
+
+
 def test_stfilenode():
     root = STFileNode("1")
     branch = STFileNode("1-1")
@@ -330,6 +353,7 @@ def test_stfilenode():
     parseroot.parse_from_string("(2 (2-1 (2-1-1)(2-1-2)(2-1-3))(2-2(2-2-1)(2-2-2)(2-2-3)))")
     parseroot.print_self_and_children()  
 
+
 def test_sttilemap():
     f = open("tuxlevels/icy_valley.stl", 'rt')
     s = f.read()
@@ -342,21 +366,40 @@ def test_sttilemap():
     print(tilemaps[0].get_child_by_name("tiles").payload)
     tm = STTilemap(tilemaps[0])
     print (tm.tiles)
-    
+
+
+def test_manual_tile_maps(mm):
+    test_map = STLevel()
+    test_tilemap = STTilemap()
+    test_tilemap.create_empty_level(200,36)
+    test_row = np.ones((1,36))
+    test_tilemap.write_slice(test_row,20)
+    test_tilemap.write_slice(test_row,56)
+    test_row = np.ones((36,36))
+    for c in range(36):
+        for r in range(c):
+            test_row[c,r] = 0
+    test_tilemap.write_slice(test_row,100)
+    test_map.add_tilemap(test_tilemap)
+    slc = test_map.get_slice(0,200)
+    show_image_in_window(generate_image_from_slice(slc))
+
 
 def test_stlevel(mm):
     level = mm.get_map("levels/icy_valley.stl")
     solid_map = level.get_combined_solid()
     print(solid_map)
     img = generate_image_from_slice(level.get_slice(0, 512))
-    img.save("test.png")
+    # img.save("test.png")
+    show_image_in_window(img)
     return solid_map
 
+
 if __name__ == "__main__":
-#    test_stfilenode()
-#    test_sttilemap()
-    mm = MapManager()
+    # test_stfilenode()
+    # test_sttilemap()
+    map_man = MapManager()
 #    sm = test_stlevel(mm)
-    level = mm.get_map("levels/bonus1/abednego-level1.stl")
-    level.get_starting_location()
-    
+#    level = mm.get_map("levels/bonus1/abednego-level1.stl")
+#    level.get_starting_location()
+    test_manual_tile_maps(map_man)
