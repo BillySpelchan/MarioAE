@@ -4,6 +4,7 @@ import numpy as np
 import random
 import stparser
 import STModel
+import STEvaluator
 
 LEVEL_LIST = [ "levels/bonus3/but_no_one_can_stop_it.stl",
                         "levels/bonus3/crystal sunset.stl",
@@ -125,8 +126,37 @@ class LevelGenerator:
             self.tilemap.write_slice(lslice.reshape((7, 36)), 7 * c)
         return self.map
 
+    def replace_column(self, source_slice, column_slice, column_to_replace):
+        for indx in range(self.slice_height):
+            source_slice[column_to_replace * self.slice_height + indx] = column_slice[0, indx]
+        return source_slice
+
+    def extract_column(self, source_slice, column_to_extract):
+        column_slice = np.zeros((1, self.slice_height))
+        for indx in range(self.slice_height):
+            column_slice[0, indx] = source_slice[column_to_extract * self.slice_height + indx]
+        return column_slice
+
     def generate_slide_level(self, num_cols, col_to_keep):
-        pass
+        #generate starting block
+        map_slice = self.noise_map.generate_random_slice()
+        #final map
+        self.tilemap.create_empty_level(num_cols, self.slice_height)
+        for c in range(num_cols):
+            random_slice = self.noise_map.generate_random_slice()
+            #shift "kept" portion of slide
+            for indx in range(1, col_to_keep+1):
+                temp = self.extract_column(map_slice, indx)
+                map_slice = self.replace_column(map_slice, temp, indx-1)
+            # replace rest with random generated
+            for indx in range(col_to_keep, self.slice_width):
+                temp = self.extract_column(random_slice, indx)
+                map_slice = self.replace_column(map_slice, temp, indx)
+            temp = self.get_model_prediction(map_slice)
+
+            slice_col = self.extract_column(temp[0], col_to_keep)
+            self.tilemap.write_slice(slice_col, c)
+        return self.map
 
 
 
@@ -170,5 +200,17 @@ if __name__ == '__main__':
     model.create_model(36*7, 36*5, 36*3+18)
     model.load("st_generator.h5")
     gen.set_model(model)
-    map = gen.generate_block_level(500)
-    show_map(map)
+    # map = gen.generate_block_level(500)
+    successes = 0
+    for test in range (100):
+        map = gen.generate_slide_level(500,0)
+        #show_map(map)
+        solid_map = map.get_combined_solid()
+        controller = STEvaluator.STMapSliceController(solid_map)
+        pf = STEvaluator.STAStarPath(controller, 3,12)
+        furthest = pf.find_furthest_path_node()
+        print(furthest)
+        if furthest.x >= 499:
+            successes += 1
+    print("Test complete. result ", successes)
+

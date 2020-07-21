@@ -472,5 +472,5 @@ if __name__ == '__main__':
 
     ptr = PlotTestResults()
     # ptr.plottest()
-    ptr.generate_box_plot("Autoencoder Column Error Rate", "temp.csv", 1,36)#, "baseAutoencoderBoxplot.png")
+    ptr.generate_box_plot("Path Autoencoder Column Error Rate", "mixed.csv", 1,36, "pathAutoencoderBoxplot.png")
 
