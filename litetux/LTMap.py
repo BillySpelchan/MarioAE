@@ -72,3 +72,43 @@ class LiteTuxMap:
         jstr += "}\n"
         return jstr
 
+class LTAgentNode:
+    def __init__(self, parent):
+        if parent is not None:
+            self.x = parent.x
+            self.y = parent.y
+            self.score = parent.score
+            self.state = parent.state
+        else:
+            self.x = 0
+            self.y = 0
+            self.score = 1000
+            self.state = 0
+        self.joiners = None
+        self.lesser_joiners = None
+
+
+class LTSpeedrunStateManager:
+    def __init__(self, jump_height = 4, can_backtrack = False):
+        self.jump_height = jump_height
+        self.backtracking = can_backtrack
+        self.jump_start = 2 if can_backtrack else 1
+        self.jump_angle_start = self.jump_start + jump_height
+        self.jump_back_start = self.jump_angle_start + jump_height
+        self.jump_end = self.jump_back_start
+        if can_backtrack: self.jump_end += jump_height
+        self.falling = self.jump_end
+        self.falling_forward = self.falling +1
+        self.falling_back = self.falling_forward + 1
+
+    def generate_children(self, ):
+        pass
+
+    def get_num_states(self):
+        return self.falling_back if self.backtracking else self.falling_forward
+
+
+
+class LTPathBoard:
+    def __init__(self, ltmap, ltstate_manager):
+        pass
