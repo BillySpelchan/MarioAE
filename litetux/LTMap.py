@@ -1,25 +1,25 @@
-
 LITE_TUX_SPRITE_IDS = {
-    "EMPTY" : 0,# spawn placenolder
-    "CEIL_SPIKE" : 1,
-    "CLOUD" : 2,# spawn placenolder
-    "HOVER_ENEMY" : 3,
-    "COIN" : 4,
+    "EMPTY": 0,  # spawn placenolder
+    "CEIL_SPIKE": 1,
+    "CLOUD": 2,  # spawn placenolder
+    "HOVER_ENEMY": 3,
+    "COIN": 4,
     "ENEMY": 5,
-    "BIG_COIN" : 6,
-    "SHELL_ENEMY" : 7,
-    "GROUND" : 8,
-    "GROUND_SPIKE" : 9,
-    "BREAKABLE_BRICK" : 10,
-    "SLIPPERY_GROUND" : 11,
-    "COINBOX" : 12,
-    "COLLAPSING_WALL" : 13,
-    "POWERUP" : 14,
-    "CANNON" : 15,
+    "BIG_COIN": 6,
+    "SHELL_ENEMY": 7,
+    "GROUND": 8,
+    "GROUND_SPIKE": 9,
+    "BREAKABLE_BRICK": 10,
+    "SLIPPERY_GROUND": 11,
+    "COINBOX": 12,
+    "COLLAPSING_WALL": 13,
+    "POWERUP": 14,
+    "CANNON": 15,
 
-    "ALWAYS_ACTIVE_START" : 16,
-    "CANNON_BALL" : 16
+    "ALWAYS_ACTIVE_START": 16,
+    "CANNON_BALL": 16
 }
+
 
 class LiteTuxMap:
     def __init__(self, w=400, h=36):
@@ -29,12 +29,10 @@ class LiteTuxMap:
         self._mapData = [[0 for i in range(w)] for j in range(h)]
         self.tile_str = "-v.O$e!bX^S=?BPC:"
 
-
-    def getTile(self, x, y) :
+    def getTile(self, x, y):
         tx = max(0, min(x, self.width))
         ty = max(0, min(y, self.height))
         return self._mapData[ty][tx]
-
 
     def setTile(self, x, y, value):
         tx = max(0, min(x, self.width))
@@ -43,7 +41,7 @@ class LiteTuxMap:
 
     def toVerticalString(self, start=0, end=-1):
         last = end if end > 0 else self.width
-        print (last)
+        print(last)
         s = ""
         for col in range(start, last):
             rs = ""
@@ -54,23 +52,23 @@ class LiteTuxMap:
             s = s + rs[::-1] + "\n"
         return s
 
-
     def toJSONString(self):
         jstr = "{\n \"width\": " + str(self.width) + ",\n"
-        jstr += " \"height\": " + str(self.height) +  ",\n"
+        jstr += " \"height\": " + str(self.height) + ",\n"
         jstr += " \"_mapData\": [\n"
         for row in range(self.height):
             jstr += "  ["
-            for col in range(self.width-1):
+            for col in range(self.width - 1):
                 jstr += str(self.getTile(col, row))
                 jstr += ", "
-            jstr += str(self.getTile(self.width-1, row))
-            if row < (self.height-1):
+            jstr += str(self.getTile(self.width - 1, row))
+            if row < (self.height - 1):
                 jstr += "],\n"
             else:
                 jstr += "]\n ]\n"
         jstr += "}\n"
         return jstr
+
 
 class LTAgentNode:
     def __init__(self, parent):
@@ -85,11 +83,32 @@ class LTAgentNode:
             self.score = 1000
             self.state = 0
         self.joiners = None
-        self.lesser_joiners = None
+
+    def __str__(self):
+        s = "(" + str(self.x) + "," + str(self.y) +\
+            " state " + str(self.state) +\
+            " score " + str(self.score)
+        if self.joiners is not None:
+            s = s + " with " + str(len(self.joiners)) + " joiners"
+        return s
+    
+    def add_joiner(self, node):
+        if self.joiners is None:
+            self.joiners = [];
+        self.joiners.append(node)
+
+    def setLocation(self, x, y):
+        self.x = x
+        self.y = y
+
+    def setState(self, state, score = None):
+        self.state = state
+        if score is not None:
+            self.score = score
 
 
 class LTSpeedrunStateManager:
-    def __init__(self, jump_height = 4, can_backtrack = False):
+    def __init__(self, jump_height=4, can_backtrack=False):
         self.jump_height = jump_height
         self.backtracking = can_backtrack
         self.jump_start = 2 if can_backtrack else 1
@@ -98,17 +117,81 @@ class LTSpeedrunStateManager:
         self.jump_end = self.jump_back_start
         if can_backtrack: self.jump_end += jump_height
         self.falling = self.jump_end
-        self.falling_forward = self.falling +1
+        self.falling_forward = self.falling + 1
         self.falling_back = self.falling_forward + 1
 
-    def generate_children(self, ):
+    def generate_children(self, node, map):
         pass
 
     def get_num_states(self):
         return self.falling_back if self.backtracking else self.falling_forward
 
-
+    def calculate_node_weight(self, node, map):
+        return node.score + node.x - map.width;
 
 class LTPathBoard:
     def __init__(self, ltmap, ltstate_manager):
+        self.map = ltmap
+        self.state_manager = ltstate_manager
+        self.best_nodes = [[[None for _ in range(ltmap.width)]
+                            for _ in range(ltmap.height)]
+                           for _ in range(ltstate_manager.get_num_states())]
+        self.queue = []
         pass
+
+    def dump_queue(self):
+        for node in self.queue:
+            print(node)
+
+    def remove_from_queue(self, node):
+        if node in self.queue:
+            self.queue.remove(node)
+
+    def add_node_to_queue(self, node):
+        node_weight = self.state_manager.calculate_node_weight(node, self.map)
+        index = len(self.queue)
+        for i in range (len(self.queue)):
+            cur_weight = self.state_manager.calculate_node_weight(self.queue[i], self.map)
+            if node_weight > cur_weight:
+                index = i
+                break
+        self.queue.insert(index, node)
+
+    def add_node(self, node):
+        state = node.state
+        x = node.x
+        y = node.y
+        best_node = self.best_nodes[state][y][x]
+        if best_node is None:
+            best_node = node
+            self.add_node_to_queue(node)
+        elif best_node.score < node.score:
+            node.add_joiner(best_node)
+            self.remove_from_queue(best_node)
+            best_node = node
+            self.add_node_to_queue(node)
+        else:
+            best_node.add_joiner(node)
+        self.best_nodes[state][y][x] = best_node
+
+def queueTest():
+    highest = LTAgentNode(None)
+    highest.setLocation(1,1)
+    highest.setState(0, 1000)
+    lost = LTAgentNode(None)
+    lost.setLocation(1,1)
+    lost.setState(0, 1000)
+    third = LTAgentNode(None)
+    third.setLocation(1,2)
+    third.setState(0, 998)
+    second = LTAgentNode(None)
+    second.setLocation(1,3)
+    second.setState(0, 998)
+    path = LTPathBoard(LiteTuxMap(10,10), LTSpeedrunStateManager())
+    path.add_node(highest)
+    path.add_node(lost)
+    path.add_node(third)
+    path.add_node(second)
+    path.dump_queue()
+
+queueTest()
