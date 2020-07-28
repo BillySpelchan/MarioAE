@@ -1,4 +1,5 @@
 import json
+import numpy as np
 
 LITE_TUX_SPRITE_IDS = {
     "EMPTY": 0,  # spawn placenolder
@@ -220,13 +221,12 @@ class LTSpeedrunStateManager:
 
 class LTPathBoard:
     def __init__(self, ltmap, ltstate_manager):
-        self.map = ltmap
+        self.level_map = ltmap
         self.state_manager = ltstate_manager
         self.best_nodes = [[[None for _ in range(ltmap.width)]
                             for _ in range(ltmap.height)]
                            for _ in range(ltstate_manager.get_num_states())]
         self.queue = []
-        print(self.best_nodes)
 
     def dump_queue(self):
         for node in self.queue:
@@ -238,18 +238,18 @@ class LTPathBoard:
         self.add_node_to_queue(root_node)
         while(len(self.queue) > 0):
             node = self.queue.pop(0)
-            print("debug processing node: ", node)
-            self.state_manager.generate_children(self, node, self.map)
+            #print("debug processing node: ", node)
+            self.state_manager.generate_children(self, node, self.level_map)
 
     def remove_from_queue(self, node):
         if node in self.queue:
             self.queue.remove(node)
 
     def add_node_to_queue(self, node):
-        node_weight = self.state_manager.calculate_node_weight(node, self.map)
+        node_weight = self.state_manager.calculate_node_weight(node, self.level_map)
         index = len(self.queue)
         for i in range (len(self.queue)):
-            cur_weight = self.state_manager.calculate_node_weight(self.queue[i], self.map)
+            cur_weight = self.state_manager.calculate_node_weight(self.queue[i], self.level_map)
             if node_weight > cur_weight:
                 index = i
                 break
@@ -259,7 +259,6 @@ class LTPathBoard:
         state = node.state
         x = node.x
         y = node.y
-        print("setting ", state, " at ", x, ",", y)
         best_node = self.best_nodes[state][y][x]
         if best_node is None:
             best_node = node
@@ -273,6 +272,41 @@ class LTPathBoard:
             best_node.add_joiner(node)
         self.best_nodes[state][y][x] = best_node
 
+    def get_nodes_in_column(self, column):
+        column_nodes = []
+        for row in range(self.level_map.height):
+            for state in range(self.state_manager.get_num_states()):
+                if self.best_nodes[state][row][column] is not None:
+                    column_nodes.append(self.best_nodes[state][row][column])
+        return column_nodes
+
+
+class BasicExtractor:
+    def __init__(self, ltmap, ltstate_manager, start_x, start_y, verbose=False):
+        self.level_map = ltmap
+        self.manager = ltstate_manager
+        self.verbose = verbose
+        if (verbose):
+            print("Creating solver")
+        self.board = LTPathBoard(ltmap, ltstate_manager)
+        self.board.process_all_paths(start_x, start_y)
+        self.enter_map = np.zeros((ltmap.height, ltmap.width))
+        if (verbose):
+            print("building enter map")
+        for c in range(ltmap.width):
+            nodes = self.board.get_nodes_in_column(c)
+            for node in nodes:
+                self.enter_map[node.y,node.x] = 1
+
+    def enter_map_to_string(self):
+        s = ""
+        for col in range(self.level_map.width):
+            cs = ""
+            for row in range(self.level_map.height):
+                cs += "." if self.enter_map[row,col] == 0 else "*"
+            s = s + cs[::-1]
+            s += "\n"
+        return s
 
 class MockPathBoard:
     def __init__(self):
@@ -378,5 +412,5 @@ def board_test():
 ltm = LiteTuxMap(1,1)
 ltm.load("levels/mario1-1.json")
 sm = LTSpeedrunStateManager(4, True)
-board = LTPathBoard(ltm, sm)
-board.process_all_paths(0, 11)
+extractor = BasicExtractor(ltm, sm, 0, 11)
+print(extractor.enter_map_to_string())
