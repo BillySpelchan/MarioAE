@@ -1,5 +1,5 @@
 import json
-import LTMap
+from litetux import LTMap
 
 MARIO_LT_MAPPING = {
     "-": 0,
@@ -19,15 +19,18 @@ def convertVGLCMario(level_name):
     f = open(level_name, "r")
     raw_level = f.readlines()
     f.close()
-    ltm = LTMap.LiteTuxMap(len(raw_level[0]), len(raw_level))
+    ltm = LTMap.LiteTuxMap(len(raw_level[0])-1, len(raw_level))
     for r in range(len(raw_level)):
         s = raw_level[r]
-        for c in range(len(s)):
+        for c in range(len(s)-1):
             tid = MARIO_LT_MAPPING.get(s[c])
             if tid is None:
                 tid = 16
-            ltm.setTile(c,r, tid)
-        print(s)
-    print(ltm.toVerticalString())
+            ltm.set_tile(c,r, tid)
+        #print(s)
+    return ltm
 
-convertVGLCMario("../levels/mario-1-1.txt")
+
+ltm = convertVGLCMario("../levels/mario-1-1.txt")
+print(ltm.to_vertical_string())
+ltm.save("levels/mario1-1.json")
