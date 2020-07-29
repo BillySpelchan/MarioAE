@@ -282,21 +282,25 @@ class LTPathBoard:
 
 
 class BasicExtractor:
-    def __init__(self, ltmap, ltstate_manager, start_x, start_y, verbose=False):
+    def __init__(self, ltmap, ltstate_manager, start_x, start_y):
         self.level_map = ltmap
         self.manager = ltstate_manager
-        self.verbose = verbose
-        if (verbose):
-            print("Creating solver")
         self.board = LTPathBoard(ltmap, ltstate_manager)
         self.board.process_all_paths(start_x, start_y)
         self.enter_map = np.zeros((ltmap.height, ltmap.width))
-        if (verbose):
-            print("building enter map")
-        for c in range(ltmap.width):
+
+    def perform_extraction(self):
+        for c in range(self.level_map.width):
             nodes = self.board.get_nodes_in_column(c)
             for node in nodes:
                 self.enter_map[node.y,node.x] = 1
+        return self.enter_map
+
+    def find_longest_path(self):
+        longest = self.level_map.width - 1
+        while (longest > 0) and (len(self.board.get_nodes_in_column(longest)) == 0):
+            longest -= 1
+        return longest
 
     def enter_map_to_string(self):
         s = ""
@@ -307,6 +311,29 @@ class BasicExtractor:
             s = s + cs[::-1]
             s += "\n"
         return s
+
+class PathEextractor(BasicExtractor):
+    def __init__(self,  ltmap, ltstate_manager, start_x, start_y):
+        super().__init__(ltmap, ltstate_manager, start_x, start_y)
+
+    def find_best_path_node(self):
+        last_col = self.find_longest_path()
+        nodes = self.board.get_nodes_in_column(last_col)
+        high_sccore = -9999999
+        best_node = None
+        for node in nodes:
+            if node.score > high_sccore:
+                high_score = node.score
+                best_node = node
+        print ("best node score ", high_sccore, " was ", best_node)
+        return best_node
+
+    def perform_extraction(self):
+        node = self.find_best_path_node()
+        while node is not None:
+            self.enter_map[node.y, node.x] = 1
+            node = node.parent
+
 
 class MockPathBoard:
     def __init__(self):
@@ -412,5 +439,7 @@ def board_test():
 ltm = LiteTuxMap(1,1)
 ltm.load("levels/mario1-1.json")
 sm = LTSpeedrunStateManager(4, True)
-extractor = BasicExtractor(ltm, sm, 0, 11)
+#extractor = BasicExtractor(ltm, sm, 0, 11)
+extractor = PathEextractor(ltm, sm, 0, 11)
+extractor.perform_extraction()
 print(extractor.enter_map_to_string())
