@@ -319,13 +319,10 @@ class PathEextractor(BasicExtractor):
     def find_best_path_node(self):
         last_col = self.find_longest_path()
         nodes = self.board.get_nodes_in_column(last_col)
-        high_sccore = -9999999
-        best_node = None
+        best_node = nodes.pop(0)
         for node in nodes:
-            if node.score > high_sccore:
-                high_score = node.score
+            if node.score > best_node.score:
                 best_node = node
-        print ("best node score ", high_sccore, " was ", best_node)
         return best_node
 
     def perform_extraction(self):
@@ -334,6 +331,18 @@ class PathEextractor(BasicExtractor):
             self.enter_map[node.y, node.x] = 1
             node = node.parent
 
+class LastInColumnPathExtractor(PathEextractor):
+    def __init__(self,  ltmap, ltstate_manager, start_x, start_y):
+        super().__init__(ltmap, ltstate_manager, start_x, start_y)
+
+    def perform_extraction(self):
+        node = self.find_best_path_node()
+        current_column = node.x + 1
+        while node is not None:
+            if current_column != node.x:
+                self.enter_map[node.y, node.x] = 1
+                current_column = node.x
+            node = node.parent
 
 class MockPathBoard:
     def __init__(self):
@@ -440,6 +449,8 @@ ltm = LiteTuxMap(1,1)
 ltm.load("levels/mario1-1.json")
 sm = LTSpeedrunStateManager(4, True)
 #extractor = BasicExtractor(ltm, sm, 0, 11)
-extractor = PathEextractor(ltm, sm, 0, 11)
+#extractor = PathEextractor(ltm, sm, 0, 11)
+extractor = LastInColumnPathExtractor(ltm, sm, 0, 11)
 extractor.perform_extraction()
 print(extractor.enter_map_to_string())
+
