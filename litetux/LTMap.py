@@ -312,7 +312,7 @@ class BasicExtractor:
             s += "\n"
         return s
 
-class PathEextractor(BasicExtractor):
+class PathExtractor(BasicExtractor):
     def __init__(self,  ltmap, ltstate_manager, start_x, start_y):
         super().__init__(ltmap, ltstate_manager, start_x, start_y)
 
@@ -332,7 +332,44 @@ class PathEextractor(BasicExtractor):
             node = node.parent
         return self.enter_map
 
-class LastInColumnPathExtractor(PathEextractor):
+
+class PathExtractorWithJumpState(PathExtractor):
+    def __init__(self, ltmap, ltstate_manager, start_x, start_y):
+        super().__init__(ltmap, ltstate_manager, start_x, start_y)
+        self.state_map = np.zeros((2, self.level_map.height, self.level_map.width))
+
+    def perform_extraction(self):
+        node = self.find_best_path_node()
+        while node is not None:
+            self.enter_map[node.y, node.x] = 1
+            self.state_map[0, node.y, node.x] = 1
+            if (node.state >= self.manager.jump_start) and (node.state < self.manager.jump_end):
+                self.state_map[1, node.y, node.x] = 1
+            elif node.state >= self.manager.falling:
+                self.state_map[1, node.y, node.x] = -1
+            node = node.parent
+        return self.state_map
+
+    def enter_map_to_string(self):
+        s = ""
+        for col in range(self.level_map.width):
+            cs = ""
+            for row in range(self.level_map.height):
+                if self.state_map[0,row,col] > 0:
+                    if self.state_map[1,row,col] > 0:
+                        cs += "J"
+                    elif self.state_map[1,row,col] < 0:
+                        cs += "F"
+                    else:
+                        cs += "*"
+                else:
+                    cs += "."
+            s = s + cs[::-1]
+            s += "\n"
+        return s
+
+
+class LastInColumnPathExtractor(PathExtractor):
     def __init__(self,  ltmap, ltstate_manager, start_x, start_y):
         super().__init__(ltmap, ltstate_manager, start_x, start_y)
 
@@ -346,7 +383,7 @@ class LastInColumnPathExtractor(PathEextractor):
             node = node.parent
         return self.enter_map
 
-class BestReachableAsFloatExtractor(PathEextractor):
+class BestReachableAsFloatExtractor(PathExtractor):
     def __init__(self,  ltmap, ltstate_manager, start_x, start_y):
         super().__init__(ltmap, ltstate_manager, start_x, start_y)
 
@@ -368,6 +405,18 @@ class BestReachableAsFloatExtractor(PathEextractor):
             s += "\n"
         return s
 
+class BestReachableAsBitsExtractor(BestReachableAsFloatExtractor):
+    def __init__(self,  ltmap, ltstate_manager, start_x, start_y):
+        super().__init__(ltmap, ltstate_manager, start_x, start_y)
+
+    def perform_extraction(self):
+        super().perform_extraction()
+        multibit_map = np.zeros((2, self.level_map.height, self.level_map.width))
+        for col in range(self.level_map.width):
+            for row in range(self.level_map.height):
+                multibit_map[0,row,col] = 1 if self.enter_map[row,col] > .25 else 0
+                multibit_map[1,row,col] = 1 if self.enter_map[row,col] > .75 else 0
+        return multibit_map
 
 class MockPathBoard:
     def __init__(self):
@@ -474,9 +523,12 @@ ltm = LiteTuxMap(1,1)
 ltm.load("levels/mario1-1.json")
 sm = LTSpeedrunStateManager(4, True)
 #extractor = BasicExtractor(ltm, sm, 0, 11)
-#extractor = PathEextractor(ltm, sm, 0, 11)
+#extractor = PathExtractor(ltm, sm, 0, 11)
 #extractor = LastInColumnPathExtractor(ltm, sm, 0, 11)
-extractor = BestReachableAsFloatExtractor(ltm, sm, 0, 11)
-extractor.perform_extraction()
+#extractor = BestReachableAsFloatExtractor(ltm, sm, 0, 11)
+#extractor = BestReachableAsBitsExtractor(ltm, sm, 0, 11)
+extractor = PathExtractorWithJumpState(ltm, sm, 0, 11)
+enter_map = extractor.perform_extraction()
 print(extractor.enter_map_to_string())
-
+print(enter_map[0,:,100])
+print(enter_map[1,:,100])
