@@ -330,6 +330,7 @@ class PathEextractor(BasicExtractor):
         while node is not None:
             self.enter_map[node.y, node.x] = 1
             node = node.parent
+        return self.enter_map
 
 class LastInColumnPathExtractor(PathEextractor):
     def __init__(self,  ltmap, ltstate_manager, start_x, start_y):
@@ -343,6 +344,30 @@ class LastInColumnPathExtractor(PathEextractor):
                 self.enter_map[node.y, node.x] = 1
                 current_column = node.x
             node = node.parent
+        return self.enter_map
+
+class BestReachableAsFloatExtractor(PathEextractor):
+    def __init__(self,  ltmap, ltstate_manager, start_x, start_y):
+        super().__init__(ltmap, ltstate_manager, start_x, start_y)
+
+    def perform_extraction(self):
+        for c in range(self.level_map.width):
+            nodes = self.board.get_nodes_in_column(c)
+            for node in nodes:
+                self.enter_map[node.y,node.x] = .5
+        return super().perform_extraction()
+
+    def enter_map_to_string(self):
+        s = ""
+        for col in range(self.level_map.width):
+            cs = ""
+            for row in range(self.level_map.height):
+                weight = self.enter_map[row,col]
+                cs += "." if weight < .25 else ("*" if weight > .75 else "!")
+            s = s + cs[::-1]
+            s += "\n"
+        return s
+
 
 class MockPathBoard:
     def __init__(self):
@@ -450,7 +475,8 @@ ltm.load("levels/mario1-1.json")
 sm = LTSpeedrunStateManager(4, True)
 #extractor = BasicExtractor(ltm, sm, 0, 11)
 #extractor = PathEextractor(ltm, sm, 0, 11)
-extractor = LastInColumnPathExtractor(ltm, sm, 0, 11)
+#extractor = LastInColumnPathExtractor(ltm, sm, 0, 11)
+extractor = BestReachableAsFloatExtractor(ltm, sm, 0, 11)
 extractor.perform_extraction()
 print(extractor.enter_map_to_string())
 
