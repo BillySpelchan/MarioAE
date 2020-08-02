@@ -55,6 +55,29 @@ class LiteTuxMap:
             s = s + rs[::-1] + "\n"
         return s
 
+    def extract_planes(self, desired_planes, start_col, num_columns):
+        """ extracts data as consecutive planes with planes organized as
+            consecutive row strips returning as numpy 1d array """
+        num_planes = 0
+        cur_plane = 1
+        while cur_plane <= desired_planes:
+            if (desired_planes & cur_plane) == cur_plane:
+                num_planes += 1
+            cur_plane <<= 1
+
+        bit_plane = np.ones((self.height * num_columns * num_planes))
+        cur_plane = 1
+        plane_index = 0
+        while cur_plane <= desired_planes:
+            if (desired_planes & cur_plane) == cur_plane:
+                for c in range(num_columns):
+                    for r in range(self.height):
+                        tile = self.get_tile(c+start_col, r)
+                        bit_plane[plane_index] = 1 if (tile & cur_plane) == cur_plane else 0
+                        plane_index += 1
+            cur_plane <<= 1
+        return bit_plane
+
     def to_json_string(self):
         jstr = "{\n \"width\": " + str(self.width) + ",\n"
         jstr += " \"height\": " + str(self.height) + ",\n"
@@ -430,6 +453,11 @@ def map_test():
     ltm = LiteTuxMap()
     ltm.from_json_string('{"width":5, "height":3, "_mapData":[[0,0,0,0,0],[0,0,0,0,0],[8,8,8,8,8]]}')
     print(ltm.to_vertical_string())
+    ltm.from_json_string('{"width":5, "height":3, "_mapData":[[0,1,2,3,4],[5,6,7,8,9],[10,11,12,13,14]]}')
+    for p in range(15):
+        print(p, ltm.extract_planes(p, 2, 1))
+    print(ltm.extract_planes(8, 0, 5)[:])
+
 
 
 def agent_test():
@@ -515,7 +543,7 @@ def board_test():
     board = LTPathBoard(ltm, sm)
     board.process_all_paths(0, 8)
     
-#map_test()
+map_test()
 #agent_test()
 #queue_test()
 #board_test()
@@ -527,8 +555,10 @@ sm = LTSpeedrunStateManager(4, True)
 #extractor = LastInColumnPathExtractor(ltm, sm, 0, 11)
 #extractor = BestReachableAsFloatExtractor(ltm, sm, 0, 11)
 #extractor = BestReachableAsBitsExtractor(ltm, sm, 0, 11)
+"""
 extractor = PathExtractorWithJumpState(ltm, sm, 0, 11)
 enter_map = extractor.perform_extraction()
 print(extractor.enter_map_to_string())
 print(enter_map[0,:,100])
 print(enter_map[1,:,100])
+"""
