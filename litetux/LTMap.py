@@ -542,8 +542,8 @@ def board_test():
     sm = LTSpeedrunStateManager(4,True)
     board = LTPathBoard(ltm, sm)
     board.process_all_paths(0, 8)
-    
-map_test()
+
+#map_test()
 #agent_test()
 #queue_test()
 #board_test()

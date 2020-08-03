@@ -4,8 +4,8 @@ from keras.layers import Input, Dense
 from keras.models import Model
 from keras.models import load_model
 
-import stparser
-
+from litetux.LTMap import LiteTuxMap, LTSpeedrunStateManager, PathExtractorWithJumpState
+from litetux import LTMap
 
 class LTModel:
     def __init__(self):
@@ -52,9 +52,40 @@ class LTModel:
     def load(self, saved_model_name="lt.h5"):
         self.model = load_model(saved_model_name)
 
-
 class PerformTests:
-    def buildTrainingData(self, ltmap, cols_in_slice, path_extractor):
+    def build_strip_set(self, ltmap, cols_in_slice, path_extractor):
+        results = None
+        extracted_path = path_extractor.perform_extraction()
+        if len(extracted_path.shape) == 2:
+            extracted_path = np.reshape(extracted_path, (1, extracted_path.shape[0], extracted_path.shape[1]))
+        shape = extracted_path.shape
+        for i in range(ltmap.width - cols_in_slice):
+            strip = ltmap.extract_planes(8, i, cols_in_slice)
+            for p in range(shape[0]):
+                for c in range(cols_in_slice):
+                    strip = np.append(strip, extracted_path[p,:,i+c])
+            strip = np.reshape(strip, (1, strip.shape[0]))
+            if results is None:
+                results = strip
+            else:
+                results = np.vstack([results,strip])
+        return results
+
+    def build_training_set(self, list, cols_in_slice, extractor_class):
+        training_set = None
+        ltm = LiteTuxMap(1,1)
+        sm = LTSpeedrunStateManager()
+        for filename in list:
+            print("processing ", filename)
+            ltm.load(filename)
+            path_extractor = extractor_class(ltm, sm, 0,8)
+            path_extractor.perform_extraction()
+            slices = self.build_strip_set(ltm, cols_in_slice, path_extractor)
+            if training_set is None:
+                training_set = slices
+            else:
+                training_set = np.vstack([training_set, slices])
+        return training_set
 
     def compare_env_encoding(self, original, derived):
         results = np.zeros(original.shape, dtype=np.int8)
@@ -108,3 +139,35 @@ class PerformTests:
             if comp_result[indx] == 3:
                 results += 1
         return results
+
+
+
+
+def test_strip_extraction():
+    ltm = LiteTuxMap(1, 1)
+    ltm.load("levels/mario1-1.json")
+    sm = LTSpeedrunStateManager(4, True)
+    extractor = PathExtractorWithJumpState(ltm, sm, 0, 11)
+    tests = PerformTests()
+    strips = tests.buildTrainingData(ltm, 2, extractor)
+    print(strips.shape)
+    for i in range(strips.shape[0]):
+        print(strips[i,:])
+
+TRAIN_LEVELS = ["levels/mario-1-1.json",
+              "levels/mario-2-1.json","levels/mario-3-1.json",
+              "levels/mario-4-1.json","levels/mario-4-2.json","levels/mario-5-1.json",
+              "levels/mario-6-1.json","levels/mario-6-2.json",
+              "levels/mario-7-1.json","levels/mario-8-1.json"]
+TEST_LEVELS = ["levels/mario-1-2.json", "levels/mario-3-3.json", "levels/mario-6-1.json"]
+
+tests = PerformTests()
+strips = tests.build_training_set(TRAIN_LEVELS, 4, LTMap.BasicExtractor)
+print(strips.shape)
+model = LTModel()
+model.create_model(8*14,4*14,2*14)
+model.train_model(strips, 50)
+prediction = model.predict_slice(strips[0])
+print(prediction)
+results = tests.compare_env_encoding_to_col_string(strips[0], prediction[0], 14)
+print(results)
