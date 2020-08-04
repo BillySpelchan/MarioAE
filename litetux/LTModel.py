@@ -55,15 +55,17 @@ class LTModel:
 class PerformTests:
     def build_strip_set(self, ltmap, cols_in_slice, path_extractor):
         results = None
-        extracted_path = path_extractor.perform_extraction()
-        if len(extracted_path.shape) == 2:
-            extracted_path = np.reshape(extracted_path, (1, extracted_path.shape[0], extracted_path.shape[1]))
-        shape = extracted_path.shape
+        if path_extractor is not None:
+            extracted_path = path_extractor.perform_extraction()
+            if len(extracted_path.shape) == 2:
+                extracted_path = np.reshape(extracted_path, (1, extracted_path.shape[0], extracted_path.shape[1]))
+            shape = extracted_path.shape
         for i in range(ltmap.width - cols_in_slice):
             strip = ltmap.extract_planes(8, i, cols_in_slice)
-            for p in range(shape[0]):
-                for c in range(cols_in_slice):
-                    strip = np.append(strip, extracted_path[p,:,i+c])
+            if path_extractor is not None:
+                for p in range(shape[0]):
+                    for c in range(cols_in_slice):
+                        strip = np.append(strip, extracted_path[p,:,i+c])
             strip = np.reshape(strip, (1, strip.shape[0]))
             if results is None:
                 results = strip
@@ -78,8 +80,11 @@ class PerformTests:
         for filename in list:
             print("processing ", filename)
             ltm.load(filename)
-            path_extractor = extractor_class(ltm, sm, 0,8)
-            path_extractor.perform_extraction()
+            if extractor_class is not None:
+                path_extractor = extractor_class(ltm, sm, 0,8)
+                path_extractor.perform_extraction()
+            else:
+                path_extractor = None
             slices = self.build_strip_set(ltm, cols_in_slice, path_extractor)
             if training_set is None:
                 training_set = slices
@@ -140,6 +145,17 @@ class PerformTests:
                 results += 1
         return results
 
+    def test_level(self, expected_slices, model, env_bits, test_name):
+        shape = expected_slices.shape
+        error_count = 0
+        solid_error_count = 0
+        for i in range(shape[0]):
+            prediction = model.predict_slice(expected_slices[0])
+            test_result = self.compare_env_encoding(expected_slices[i,0:env_bits], prediction[0, 0:env_bits])
+            error_count += self.count_comparison_errors(test_result)
+            solid_error_count += self.count_comparison_should_be_solid_errors(test_result)
+        return test_name + "," + str(error_count) + "," + str(solid_error_count) +\
+                "," + str(error_count/shape[0]) + "," + str(solid_error_count/error_count)
 
 
 
@@ -154,6 +170,47 @@ def test_strip_extraction():
     for i in range(strips.shape[0]):
         print(strips[i,:])
 
+
+def perform_baseline_batch_test(training_levels, test_levels, extractor_classes, filename):
+    test = PerformTests()
+    csv = open(filename, 'w')
+    for extractor_class in extractor_classes:
+        print("Testing ", extractor_class)
+        training_set = test.build_training_set(training_levels, 4, extractor_class)
+        model = LTModel()
+        model.create_model(training_set.shape[1], training_set.shape[1]//2, training_set.shape[1]//4)
+        model.train_model(training_set,150)
+        for name in test_levels:
+            test_set = test.build_training_set([name], 4, extractor_class)
+            result = test.test_level(test_set, model, 14 * 4, str(extractor_class)+name)
+            print(result)
+            csv.write(result)
+            csv.write("\n")
+    csv.close()
+
+def perform_full_batch_test(training_levels, test_levels, extractor_classes, filename):
+    test = PerformTests()
+    csv = open(filename, 'w')
+    for extractor_class in extractor_classes:
+        print("Testing ", extractor_class)
+        training_set = test.build_training_set(training_levels, 4, extractor_class)
+        input_size = training_set.shape[1]
+        step_size = input_size // 10
+        for hidden in range (step_size//2, input_size-step_size, step_size):
+            for encoding in range (step_size, hidden-step_size, step_size):
+                name_base = str(extractor_class)+str(hidden)+"-"+str(encoding)
+                model = LTModel()
+                model.create_model(input_size, hidden, encoding)
+                model.train_model(training_set,150)
+                for name in test_levels:
+                    test_set = test.build_training_set([name], 4, extractor_class)
+                    result = test.test_level(test_set, model, 14 * 4, name_base+name)
+                    print(result)
+                    csv.write(result)
+                    csv.write("\n")
+    csv.close()
+
+
 TRAIN_LEVELS = ["levels/mario-1-1.json",
               "levels/mario-2-1.json","levels/mario-3-1.json",
               "levels/mario-4-1.json","levels/mario-4-2.json","levels/mario-5-1.json",
@@ -161,6 +218,10 @@ TRAIN_LEVELS = ["levels/mario-1-1.json",
               "levels/mario-7-1.json","levels/mario-8-1.json"]
 TEST_LEVELS = ["levels/mario-1-2.json", "levels/mario-3-3.json", "levels/mario-6-1.json"]
 
+EXTRACTORS = [None, LTMap.BasicExtractor, LTMap.BestReachableAsBitsExtractor,
+              LTMap.LastInColumnPathExtractor, LTMap.BestReachableAsFloatExtractor,
+              LTMap.PathExtractor, LTMap.PathExtractorWithJumpState]
+"""
 tests = PerformTests()
 strips = tests.build_training_set(TRAIN_LEVELS, 4, LTMap.BasicExtractor)
 print(strips.shape)
@@ -171,3 +232,8 @@ prediction = model.predict_slice(strips[0])
 print(prediction)
 results = tests.compare_env_encoding_to_col_string(strips[0], prediction[0], 14)
 print(results)
+test_strips = tests.build_training_set([TEST_LEVELS[0]],4, LTMap.BasicExtractor)
+print(tests.test_level(test_strips, model, 14*4, "test"))
+"""
+perform_full_batch_test(TRAIN_LEVELS, TEST_LEVELS, EXTRACTORS, "path_test.csv")
+
