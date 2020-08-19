@@ -150,13 +150,25 @@ class PerformTests:
         error_count = 0
         solid_error_count = 0
         for i in range(shape[0]):
-            prediction = model.predict_slice(expected_slices[0])
+            prediction = model.predict_slice(expected_slices[i])
             test_result = self.compare_env_encoding(expected_slices[i,0:env_bits], prediction[0, 0:env_bits])
             error_count += self.count_comparison_errors(test_result)
             solid_error_count += self.count_comparison_should_be_solid_errors(test_result)
         return test_name + "," + str(error_count) + "," + str(solid_error_count) +\
                 "," + str(error_count/shape[0]) + "," + str(solid_error_count/error_count)
 
+    def test_prediction(self, slices, model, cols_per_slice, test_name):
+        shape = slices.shape
+        env_bits = cols_per_slice * 14 # TODO refactor out sizes somehow
+        error_count = 0
+        solid_error_count = 0
+        for i in range(shape[0]-cols_per_slice):
+            prediction = model.predict_slice(slices[i])
+            test_result = self.compare_env_encoding(slices[i+cols_per_slice,0:env_bits], prediction[0, 0:env_bits])
+            error_count += self.count_comparison_errors(test_result)
+            solid_error_count += self.count_comparison_should_be_solid_errors(test_result)
+        return test_name + "," + str(error_count) + "," + str(solid_error_count) +\
+                "," + str(error_count/shape[0]) + "," + str(solid_error_count/error_count)
 
 
 def test_strip_extraction():
@@ -165,11 +177,10 @@ def test_strip_extraction():
     sm = LTSpeedrunStateManager(4, True)
     extractor = PathExtractorWithJumpState(ltm, sm, 0, 11)
     tests = PerformTests()
-    strips = tests.buildTrainingData(ltm, 2, extractor)
+    strips = tests.build_strip_set(ltm, 2, extractor)
     print(strips.shape)
     for i in range(strips.shape[0]):
         print(strips[i,:])
-
 
 def perform_baseline_batch_test(training_levels, test_levels, extractor_classes, filename):
     test = PerformTests()
@@ -179,7 +190,7 @@ def perform_baseline_batch_test(training_levels, test_levels, extractor_classes,
         training_set = test.build_training_set(training_levels, 4, extractor_class)
         model = LTModel()
         model.create_model(training_set.shape[1], training_set.shape[1]//2, training_set.shape[1]//4)
-        model.train_model(training_set,150)
+        model.train_model(training_set,training_set.shape[1])
         for name in test_levels:
             test_set = test.build_training_set([name], 4, extractor_class)
             result = test.test_level(test_set, model, 14 * 4, str(extractor_class)+name)
@@ -191,6 +202,7 @@ def perform_baseline_batch_test(training_levels, test_levels, extractor_classes,
 def perform_full_batch_test(training_levels, test_levels, extractor_classes, filename):
     test = PerformTests()
     csv = open(filename, 'w')
+    eid = 0
     for extractor_class in extractor_classes:
         print("Testing ", extractor_class)
         training_set = test.build_training_set(training_levels, 4, extractor_class)
@@ -198,18 +210,66 @@ def perform_full_batch_test(training_levels, test_levels, extractor_classes, fil
         step_size = input_size // 10
         for hidden in range (step_size//2, input_size-step_size, step_size):
             for encoding in range (step_size, hidden-step_size, step_size):
-                name_base = str(extractor_class)+str(hidden)+"-"+str(encoding)
+                name_base = str(extractor_class)+str(hidden)+"-"+str(encoding)+"," + str(eid)
                 model = LTModel()
                 model.create_model(input_size, hidden, encoding)
-                model.train_model(training_set,150)
+                model.train_model(training_set,input_size)
+                mapid = 0
                 for name in test_levels:
                     test_set = test.build_training_set([name], 4, extractor_class)
-                    result = test.test_level(test_set, model, 14 * 4, name_base+name)
+                    result = test.test_level(test_set, model, 14 * 4, name_base+','+str(mapid))
                     print(result)
                     csv.write(result)
                     csv.write("\n")
+                    mapid += 1
+        eid += 1
     csv.close()
 
+
+def perform_prediction_batch_test(training_levels, test_levels, extractor_classes, filename):
+    test = PerformTests()
+    csv = open(filename, 'w')
+    for extractor_class in extractor_classes:
+        print("Testing ", extractor_class)
+        training_set = test.build_training_set(training_levels, 4, extractor_class)
+        model = LTModel()
+        model.create_model(training_set.shape[1], training_set.shape[1]//2, training_set.shape[1]//4)
+        n = training_set.shape[0]
+        model.train_for_different_output(training_set[:n-4,:], training_set[4:,:],150)
+        for name in test_levels:
+            test_set = test.build_training_set([name], 4, extractor_class)
+            result = test.test_prediction(test_set, model, 4, str(extractor_class)+name)
+            print(result)
+            csv.write(result)
+            csv.write("\n")
+    csv.close()
+
+def perform_full_prediction_test(training_levels, test_levels, extractor_classes, filename):
+    test = PerformTests()
+    csv = open(filename, 'w')
+    eid = 0
+    for extractor_class in extractor_classes:
+        print("Testing ", extractor_class)
+        training_set = test.build_training_set(training_levels, 4, extractor_class)
+        input_size = training_set.shape[1]
+        step_size = input_size // 10
+        for hidden in range (step_size//2, input_size-step_size, step_size):
+            for encoding in range (step_size, hidden-step_size, step_size):
+                name_base = str(extractor_class)+str(hidden)+"-"+str(encoding)+"," + str(eid)
+                model = LTModel()
+                model.create_model(input_size, hidden, encoding)
+                model.train_for_different_output(training_set[:training_set.shape[0] - 4, :], training_set[4:, :], 150)
+                model.train_model(training_set,input_size)
+                mapid = 0
+                for name in test_levels:
+                    test_set = test.build_training_set([name], 4, extractor_class)
+                    result = test.test_prediction(test_set, model, 4, name_base+','+str(mapid))
+                    print(result)
+                    csv.write(result)
+                    csv.write("\n")
+                    mapid += 1
+        eid += 1
+    csv.close()
 
 TRAIN_LEVELS = ["levels/mario-1-1.json",
               "levels/mario-2-1.json","levels/mario-3-1.json",
@@ -221,19 +281,23 @@ TEST_LEVELS = ["levels/mario-1-2.json", "levels/mario-3-3.json", "levels/mario-6
 EXTRACTORS = [None, LTMap.BasicExtractor, LTMap.BestReachableAsBitsExtractor,
               LTMap.LastInColumnPathExtractor, LTMap.BestReachableAsFloatExtractor,
               LTMap.PathExtractor, LTMap.PathExtractorWithJumpState]
-"""
-tests = PerformTests()
-strips = tests.build_training_set(TRAIN_LEVELS, 4, LTMap.BasicExtractor)
-print(strips.shape)
-model = LTModel()
-model.create_model(8*14,4*14,2*14)
-model.train_model(strips, 50)
-prediction = model.predict_slice(strips[0])
-print(prediction)
-results = tests.compare_env_encoding_to_col_string(strips[0], prediction[0], 14)
-print(results)
-test_strips = tests.build_training_set([TEST_LEVELS[0]],4, LTMap.BasicExtractor)
-print(tests.test_level(test_strips, model, 14*4, "test"))
-"""
-perform_full_batch_test(TRAIN_LEVELS, TEST_LEVELS, EXTRACTORS, "path_test.csv")
 
+if __name__ == "__main__":
+    """
+    tests = PerformTests()
+    strips = tests.build_training_set(TRAIN_LEVELS, 4, LTMap.BasicExtractor)
+    print(strips.shape)
+    model = LTModel()
+    model.create_model(8*14,4*14,2*14)
+    model.train_model(strips, 50)
+    prediction = model.predict_slice(strips[0])
+    print(prediction)
+    results = tests.compare_env_encoding_to_col_string(strips[0], prediction[0], 14)
+    print(results)
+    test_strips = tests.build_training_set([TEST_LEVELS[0]],4, LTMap.BasicExtractor)
+    print(tests.test_level(test_strips, model, 14*4, "test"))
+    """
+    #perform_baseline_batch_test(TRAIN_LEVELS, TEST_LEVELS, EXTRACTORS, "path_test_bv2.csv")
+    #perform_full_batch_test(TRAIN_LEVELS, TEST_LEVELS, EXTRACTORS, "path_test2.csv")
+    #perform_prediction_batch_test(TRAIN_LEVELS, TEST_LEVELS, EXTRACTORS, "predict_base2.csv")
+    perform_full_prediction_test(TRAIN_LEVELS, TEST_LEVELS, EXTRACTORS, "predict_full.csv")
