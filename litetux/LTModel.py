@@ -154,20 +154,22 @@ def test_strip_extraction():
     for i in range(strips.shape[0]):
         print(strips[i,:])
 
-TRAIN_LEVELS = ["levels/mario-1-1.json",
-              "levels/mario-2-1.json","levels/mario-3-1.json",
-              "levels/mario-4-1.json","levels/mario-4-2.json","levels/mario-5-1.json",
-              "levels/mario-6-1.json","levels/mario-6-2.json",
-              "levels/mario-7-1.json","levels/mario-8-1.json"]
-TEST_LEVELS = ["levels/mario-1-2.json", "levels/mario-3-3.json", "levels/mario-6-1.json"]
 
-tests = PerformTests()
-strips = tests.build_training_set(TRAIN_LEVELS, 4, LTMap.BasicExtractor)
-print(strips.shape)
-model = LTModel()
-model.create_model(8*14,4*14,2*14)
-model.train_model(strips, 50)
-prediction = model.predict_slice(strips[0])
-print(prediction)
-results = tests.compare_env_encoding_to_col_string(strips[0], prediction[0], 14)
-print(results)
+if __name__ == "__main__":
+    TRAIN_LEVELS = ["levels/mario-1-1.json",
+                  "levels/mario-2-1.json","levels/mario-3-1.json",
+                  "levels/mario-4-1.json","levels/mario-4-2.json","levels/mario-5-1.json",
+                  "levels/mario-6-1.json","levels/mario-6-2.json",
+                  "levels/mario-7-1.json","levels/mario-8-1.json"]
+    TEST_LEVELS = ["levels/mario-1-2.json", "levels/mario-3-3.json", "levels/mario-6-1.json"]
+
+    tests = PerformTests()
+    strips = tests.build_training_set(TRAIN_LEVELS, 4, LTMap.BasicExtractor)
+    print(strips.shape)
+    model = LTModel()
+    model.create_model(8*14,4*14,2*14)
+    model.train_model(strips, 50)
+    prediction = model.predict_slice(strips[0])
+    print(prediction)
+    results = tests.compare_env_encoding_to_col_string(strips[0], prediction[0], 14)
+    print(results)

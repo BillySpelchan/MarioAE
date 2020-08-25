@@ -543,22 +543,24 @@ def board_test():
     board = LTPathBoard(ltm, sm)
     board.process_all_paths(0, 8)
 
-#map_test()
-#agent_test()
-#queue_test()
-#board_test()
-ltm = LiteTuxMap(1,1)
-ltm.load("levels/mario1-1.json")
-sm = LTSpeedrunStateManager(4, True)
-#extractor = BasicExtractor(ltm, sm, 0, 11)
-#extractor = PathExtractor(ltm, sm, 0, 11)
-#extractor = LastInColumnPathExtractor(ltm, sm, 0, 11)
-#extractor = BestReachableAsFloatExtractor(ltm, sm, 0, 11)
-#extractor = BestReachableAsBitsExtractor(ltm, sm, 0, 11)
-"""
-extractor = PathExtractorWithJumpState(ltm, sm, 0, 11)
-enter_map = extractor.perform_extraction()
-print(extractor.enter_map_to_string())
-print(enter_map[0,:,100])
-print(enter_map[1,:,100])
-"""
+
+if __name__ == "__main__":
+    #map_test()
+    #agent_test()
+    #queue_test()
+    #board_test()
+    ltm = LiteTuxMap(1,1)
+    ltm.load("levels/mario1-1.json")
+    sm = LTSpeedrunStateManager(4, True)
+    #extractor = BasicExtractor(ltm, sm, 0, 11)
+    #extractor = PathExtractor(ltm, sm, 0, 11)
+    #extractor = LastInColumnPathExtractor(ltm, sm, 0, 11)
+    #extractor = BestReachableAsFloatExtractor(ltm, sm, 0, 11)
+    #extractor = BestReachableAsBitsExtractor(ltm, sm, 0, 11)
+    """
+    extractor = PathExtractorWithJumpState(ltm, sm, 0, 11)
+    enter_map = extractor.perform_extraction()
+    print(extractor.enter_map_to_string())
+    print(enter_map[0,:,100])
+    print(enter_map[1,:,100])
+    """
