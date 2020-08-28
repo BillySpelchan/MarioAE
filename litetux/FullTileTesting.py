@@ -1,7 +1,7 @@
 import numpy as np
 from litetux import LTModel, LTMap
 import math
-
+import time
 
 class MapTest:
     def __init__(self, map_1, map_2, tile_bits=4):
@@ -106,14 +106,15 @@ class OneHotEncoder:
                     slc_offset += 1
                 target_map.set_tile(c+start_col, r, t_index)
 
-    def build_slice_set(self, file_list):
+    def build_slice_set(self, file_list, chunks=False):
         slice_set = None
         ltm = LTMap.LiteTuxMap(1, 1)
+        step_size = self.cols if chunks else 1
         for filename in file_list:
             print("processing ", filename)
             ltm.load(filename)
             end_col = ltm.width - self.cols
-            for c in range(end_col):
+            for c in range(0, end_col, step_size):
                 if slice_set is None:
                     slice_set = np.reshape(self.encode_slice(ltm, c), (1, self.in_nodes))
                 else:
@@ -126,6 +127,44 @@ class OneHotEncoder:
 
     def predict(self, slc):
         return self.model.predict_slice(slc)
+
+
+class BitplainEncoder(OneHotEncoder):
+    def __init__(self, slice_cols, slice_rows, hidden=.5, encoded=.25):
+        super().__init__(slice_cols, slice_rows, hidden, encoded)
+        self.tile_bitplains=4
+        self.rows = slice_rows
+        self.cols = slice_cols
+        self.model = LTModel.LTModel()
+        self.in_nodes = slice_cols * slice_rows * self.tile_bitplains
+        h_nodes = math.floor(self.in_nodes * hidden)
+        e_nodes = math.floor(self.in_nodes * encoded)
+        self.model.create_model(self.in_nodes, h_nodes, e_nodes)
+        pass
+
+    def encode_slice(self, lt_map, start_col):
+        slc = np.zeros((self.in_nodes))
+        for c in range(self.cols):
+            for r in range(self.rows):
+                t = lt_map.get_tile(c + start_col, r)
+                for b in range(self.tile_bitplains):
+                    mask = 1 << b
+                    bit = 1 if (t & mask) > 0 else 0
+                    slc[c*self.rows*self.tile_bitplains+r*self.tile_bitplains+b] = bit
+        return slc
+
+    def decode_slice(self, slc, target_map, start_col):
+        slc_offset = 0
+        for c in range(self.cols):
+            for r in range(self.rows):
+                t = 0
+                for b in range(self.tile_bitplains):
+                    mask = 1 << b
+                    if (slc[slc_offset] > 0):
+                        t += mask
+                    slc_offset += 1
+                target_map.set_tile(c+start_col, r, t)
+
 
 SMALL_TEST_MAP = "{\"width\":4, \"height\":4, \"_mapData\":[[0,1,2,3],[4,5,6,7],[8,9,10,11],[12,13,14,15]]}"
 
@@ -158,6 +197,48 @@ def test_one_hot_decode():
     print(mt)
 
 
+def test_model(train_set, test_set, model, filename=None, prefix="test", epochs=300):
+    """:key
+    """
+    training = model.build_slice_set(train_set)
+    print("debug - start training")
+    tmr = time.process_time_ns()
+    model.train(training, training, epochs)
+    train_time = time.process_time_ns() - tmr
+    print("debug - start testing")
+    true_map = LTMap.LiteTuxMap(1,1)
+    for lvlfile in test_set:
+        s = prefix + "," + str(train_time) + "," + lvlfile+"," + str(epochs) + ","
+        lvl_chunks = model.build_slice_set([lvlfile], True)
+        true_map.load(lvlfile)
+        predicted_map = LTMap.LiteTuxMap(true_map.width, true_map.height)
+        for i in range(lvl_chunks.shape[0]):
+            slc = model.predict(lvl_chunks[i])
+            model.decode_slice(slc[0],predicted_map,i*model.cols)
+        print(predicted_map.to_vertical_string())
+        test = MapTest(true_map, predicted_map)
+        s+= str(test.get_total_tile_errors()) + ","
+        s+= str(test.get_average_tile_hamming_error()) + ","
+        s+= str(test.get_average_distance_error()) + ","
+
+        print(s)
+        if filename is not None:
+            with open(filename, "a") as f:
+                f.write(s)
+                f.write("\n")
+
+
+def batch_find_best(train, test):
+    for h in range(4, 10, 1):
+        for e in range(1, h, 1):
+            for ep in range (100, 600, 100):
+                print("model size ", h/10, e/10, ep)
+                settings = str(h/10)+";"+str(e/10)
+                ohe = OneHotEncoder(4, 14, h/10, e/10)
+                test_model(TRAIN_LEVELS, TEST_LEVELS, ohe, "fullTile.csv", "OneHot"+settings, ep)
+                bpe = BitplainEncoder(4, 14, h/10, e/10)
+                test_model(TRAIN_LEVELS, TEST_LEVELS, bpe, "fullTile.csv", "BitPlain"+settings, ep)
+
 if __name__ == "__main__":
     TRAIN_LEVELS = ["levels/mario-1-1.json",
                   "levels/mario-2-1.json","levels/mario-3-1.json",
@@ -166,12 +247,8 @@ if __name__ == "__main__":
                   "levels/mario-7-1.json","levels/mario-8-1.json"]
     TEST_LEVELS = ["levels/mario-1-2.json", "levels/mario-3-3.json", "levels/mario-6-1.json"]
 
-    ohe = OneHotEncoder(4, 14)
-    ls = ohe.build_slice_set(TRAIN_LEVELS)
-    print(ls)
-    print(ls.shape)
-    ohe.train(ls)
-    pred = ohe.predict(ls[0])
-    slcmap = LTMap.LiteTuxMap(4,14)
-    ohe.decode_slice(pred[0], slcmap, 0)
-    print(slcmap.to_vertical_string())
+    # ohe = OneHotEncoder(4, 14)
+    # test_model(TRAIN_LEVELS, TEST_LEVELS, ohe)
+    bpe = BitplainEncoder(4, 14)
+    test_model(TRAIN_LEVELS, TEST_LEVELS, bpe, "fullTile.csv")
+    batch_find_best(TRAIN_LEVELS, TEST_LEVELS)
