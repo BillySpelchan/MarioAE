@@ -18,13 +18,20 @@ class LTModel:
     def create_model(self, in_lay=108, hidden=54, encode=27, noise=False):
         self.input_size = in_lay
         self.model_input = Input(shape=(in_lay,))
+        """
         self.model_layers = Dense(units=hidden, activation="relu")(self.model_input)
         self.model_layers = Dense(units=encode, activation="tanh")(self.model_layers)
         self.model_layers = Dense(units=hidden, activation="relu")(self.model_layers)
         self.model_layers = Dense(units=in_lay, activation="tanh")(self.model_layers)
+        """
+        self.model_layers = Dense(units=hidden, activation="tanh")(self.model_input)
+        self.model_layers = Dense(units=encode, activation="tanh")(self.model_layers)
+        self.model_layers = Dense(units=hidden, activation="tanh")(self.model_layers)
+        self.model_layers = Dense(units=in_lay, activation="relu")(self.model_layers)
         self.model = Model(self.model_input, self.model_layers)
         self.model.summary()
-        self.model.compile(optimizer='adadelta', loss='binary_crossentropy')
+        #self.model.compile(optimizer='adadelta', loss='binary_crossentropy')
+        self.model.compile(optimizer='adadelta', loss='mean_squared_error')
         return self.model
 
     def train_model(self, training_set, epoch, verbose=0):

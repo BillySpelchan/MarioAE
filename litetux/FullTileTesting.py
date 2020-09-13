@@ -160,8 +160,11 @@ class BitplainEncoder(OneHotEncoder):
                 t = 0
                 for b in range(self.tile_bitplains):
                     mask = 1 << b
-                    if (slc[slc_offset] > 0):
-                        t += mask
+                    try:
+                        if slc[slc_offset] > 0.4:
+                            t += mask
+                    except:
+                        print("scl for " ,slc_offset, " is ", slc[slc_offset])
                     slc_offset += 1
                 target_map.set_tile(c+start_col, r, t)
 
@@ -247,8 +250,8 @@ if __name__ == "__main__":
                   "levels/mario-7-1.json","levels/mario-8-1.json"]
     TEST_LEVELS = ["levels/mario-1-2.json", "levels/mario-3-3.json", "levels/mario-6-1.json"]
 
-    # ohe = OneHotEncoder(4, 14)
-    # test_model(TRAIN_LEVELS, TEST_LEVELS, ohe)
+    #ohe = OneHotEncoder(4, 14)
+    #test_model(TRAIN_LEVELS, TEST_LEVELS, ohe)
     bpe = BitplainEncoder(4, 14)
     test_model(TRAIN_LEVELS, TEST_LEVELS, bpe, "fullTile.csv")
-    batch_find_best(TRAIN_LEVELS, TEST_LEVELS)
+#    batch_find_best(TRAIN_LEVELS, TEST_LEVELS)
