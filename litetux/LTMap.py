@@ -112,6 +112,46 @@ class LiteTuxMap:
         save_file.close()
 
 
+class TileFrequencyMetric:
+    def __init__(self, tile_map, tile_count):
+        """
+        :param tile_map: the map to process
+        :param tile_count: total tiles used in map (gaps between numbers considered reserved)
+        """
+        self.count_table = [0 for _ in range(tile_count)]
+        self.total_tiles = 0
+        self.add_map(tile_map)
+
+    def add_map(self, tile_map):
+        map_tile_count = tile_map.width * tile_map.height
+        self.total_tiles += map_tile_count
+        for r in range(tile_map.height):
+            for c in range(tile_map.width):
+                self.count_table[tile_map.get_tile(c, r)] += 1
+
+    def get_tile_count(self, tile_id):
+        return self.count_table[tile_id]
+
+    def get_tile_percent(self, tile_id):
+        return self.count_table[tile_id] / self.total_tiles
+
+    def get_tile_group_count(self, tile_list):
+        tile_count = 0
+        for tile in tile_list:
+            tile_count += self.count_table[tile]
+        return tile_count
+
+    def get_tile_group_percentage(self, tile_list):
+        tile_count = self.get_tile_group_count(tile_list)
+        return tile_count / self.total_tiles
+
+class LiteTuxFrequencyMetrics(TileFrequencyMetric):
+    def __init__(self, tile_map):
+        super().__init__(tile_map, 16)
+
+    def get_percent_empty_space(self):
+        pass
+
 class LTAgentNode:
     def __init__(self, parent):
         self.parent = parent

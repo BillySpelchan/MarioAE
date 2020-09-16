@@ -71,7 +71,6 @@ class MapTest:
         s += self.distance_errors_to_string()
         return s
 
-
 # noinspection PyRedundantParentheses
 class OneHotEncoder:
     def __init__(self, slice_cols, slice_rows, hidden=.5, encoded=.25):
