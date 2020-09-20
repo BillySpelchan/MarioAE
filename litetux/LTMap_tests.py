@@ -41,5 +41,11 @@ class MyTestCase(unittest.TestCase):
         self.assertEqual(tile_freq.get_tile_group_count([1,7,10]), 18)
         self.assertEqual(tile_freq.get_tile_group_percentage([1,7,10]), .15)
 
+    def test_frequency_report(self):
+        test_map = LTMap.LiteTuxMap(1,1)
+        test_map.from_json_string(self.TEST_MAP)
+        tile_freq = LTMap.LiteTuxFrequencyMetrics(test_map)
+        tile_freq.generate_report()
+
 if __name__ == '__main__':
     unittest.main()

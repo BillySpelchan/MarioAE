@@ -146,11 +146,56 @@ class TileFrequencyMetric:
         return tile_count / self.total_tiles
 
 class LiteTuxFrequencyMetrics(TileFrequencyMetric):
+    TILE_LABELS = ["Empty", "Falling Spike", "Cloud", "Owl",
+                   "Coin", "Snowball", "Large coin", "Mr. Iceblock",
+                   "Ground", "Ground Spike", "Breakable Brick", "Slippery Ground",
+                   "Coinbox", "Collapsing Wall", "Power-up", "Cannon"]
+
     def __init__(self, tile_map):
         super().__init__(tile_map, 16)
 
-    def get_percent_empty_space(self):
-        pass
+    def get_empty_space_count(self):
+        return self.get_tile_group_count([0,2])
+
+    def get_empty_space_percentage(self):
+        return self.get_tile_group_percentage([0,2])
+
+    def get_interesting_count(self):
+        return self.get_tile_group_count([1,2,9,10,11,12,13,14,15])
+
+    def get_interesting_percentage(self):
+        return self.get_tile_group_percentage([1,2,9,10,11,12,13,14,15])
+
+    def get_enemies_count(self):
+        return self.get_tile_group_count([3,5,7,15])
+
+    def get_enemies_percentage(self):
+        return self.get_tile_group_percentage([3,5,7,15])
+
+    def get_hazard_count(self):
+        return self.get_tile_group_count([1,9,11,13])
+
+    def get_hazard_percentage(self):
+        return self.get_tile_group_percentage([1,9,11,13])
+
+    def get_rewards_count(self):
+        return self.get_tile_group_count([4,6,12,14])
+
+    def get_rewards_percentage(self):
+        return self.get_tile_group_percentage([4,6,12,14])
+
+    def generate_report(self):
+        for t in range(16):
+            tile_count = self.get_tile_count(t)
+            tile_percent = self.get_tile_percent(t)
+            print('{}: {:d}({:3.2f})'.format(self.TILE_LABELS[t], tile_count, tile_percent))
+        print()
+        print('Empty space: {}({})'.format(self.get_empty_space_count(), self.get_empty_space_percentage()))
+        print('Interesting: {}({})'.format(self.get_interesting_count(),self.get_interesting_percentage()))
+        print('Enemies: {}({})'.format(self.get_enemies_count(), self.get_enemies_percentage()))
+        print('Hazzards: {}({})'.format(self.get_hazard_count(), self.get_hazard_percentage()))
+        print('Rewards: {}({})'.format(self.get_rewards_count(), self.get_rewards_percentage()))
+
 
 class LTAgentNode:
     def __init__(self, parent):
