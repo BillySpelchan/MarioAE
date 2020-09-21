@@ -1,4 +1,5 @@
 import numpy as np
+import tensorflow as tf
 from litetux import LTModel, LTMap
 import math
 import time
@@ -73,7 +74,7 @@ class MapTest:
 
 # noinspection PyRedundantParentheses
 class OneHotEncoder:
-    def __init__(self, slice_cols, slice_rows, hidden=.5, encoded=.25):
+    def __init__(self, slice_cols, slice_rows, hidden=.5, encoded=.25,optimizer='adam', loss='mean_squared_error'):
         """
         :param slice_cols:
         :param slice_rows:
@@ -93,7 +94,7 @@ class OneHotEncoder:
             e_nodes = encoded
         else:
             e_nodes = math.floor(self.in_nodes * encoded)
-        self.model.create_model(self.in_nodes, h_nodes, e_nodes)
+        self.model.create_model(self.in_nodes, h_nodes, e_nodes, optimizer=optimizer, loss=loss)
 
     def encode_slice(self, lt_map, start_col):
         slc = np.zeros((self.in_nodes))
@@ -221,7 +222,7 @@ def test_model(train_set, test_set, model, filename=None, prefix="test", epochs=
     """:key
     """
     training = model.build_slice_set(train_set)
-    print("debug - start training")
+    print("debug - start training " + prefix)
     tmr = time.process_time_ns()
     model.train(training, training, epochs)
     train_time = time.process_time_ns() - tmr
@@ -263,6 +264,7 @@ def find_best_bpe_config():
     #opts = ["poisson", "mean_squared_error","mean_absolute_error", "mean_squared_logarithmic_error", "cosine_similarity",
     opts = [ "hinge", "squared_hinge", "categorical_hinge"]
     for op in opts:
+        tf.keras.backend.clear_session()
         for i in range(10):
             bpe = BitplainEncoder(4, 14, optimizer="adam", loss=op)
             test_model(TRAIN_LEVELS, TEST_LEVELS, bpe, "bpe_loss.csv", op + str(i))
@@ -270,13 +272,34 @@ def find_best_bpe_config():
 def batch_find_best_bpe(train, test):
     for h in range(112, 168, 1):
         for e in range(25, 75, 1):
+            tf.keras.backend.clear_session()
             for r in range(4):
                 print("model size ", h, e)
                 settings = str(h)+";"+str(e)
                 bpe = BitplainEncoder(4, 14, h, e)
                 test_model(TRAIN_LEVELS, TEST_LEVELS, bpe, "fullTileBPE.csv", "BitPlain"+settings)
 
-def analyse_bpe_config_report(filename):
+
+def find_best_ohe_optimizer(loss="mean_squared_error"):
+    #opts = ["SGD", "RMSProp", "adam", "adadelta", "adagrad",
+    opts = ["adamax", "nadam"]
+    for op in opts:
+        tf.keras.backend.clear_session()
+        for i in range(10):
+            ohe = OneHotEncoder(4, 14, optimizer=op, loss=loss)
+            test_model(TRAIN_LEVELS, TEST_LEVELS, ohe, "ohe_opt.csv", op + str(i))
+
+
+def find_best_ohe_loss(optimizer="adadelta"):
+    opts = ["binary_crossentropy", "categorical_crossentropy","poisson", "mean_squared_error","mean_absolute_error", "mean_squared_logarithmic_error", "cosine_similarity",  "hinge", "squared_hinge", "categorical_hinge"]
+    for op in opts:
+        tf.keras.backend.clear_session()
+        for i in range(10):
+            ohe = OneHotEncoder(4, 14, optimizer=optimizer, loss=op)
+            test_model(TRAIN_LEVELS, TEST_LEVELS, ohe, "ohe_loss.csv", op + str(i))
+
+
+def analyse_best_config_report(filename):
     results = {}
     with open(filename, 'r') as csv:
         for line in csv:
@@ -333,4 +356,6 @@ if __name__ == "__main__":
 
     #find_best_bpe_config()
     #analyse_bpe_config_report("bpe_loss.csv")
-    batch_find_best_bpe(TRAIN_LEVELS, TEST_LEVELS)
+    #batch_find_best_bpe(TRAIN_LEVELS, TEST_LEVELS)
+    find_best_ohe_optimizer()
+    analyse_best_config_report("ohe_opt.csv")
