@@ -270,7 +270,7 @@ def find_best_bpe_config():
             test_model(TRAIN_LEVELS, TEST_LEVELS, bpe, "bpe_loss.csv", op + str(i))
 
 def batch_find_best_bpe(train, test):
-    for h in range(112, 168, 1):
+    for h in range(128, 168, 1):
         for e in range(25, 75, 1):
             tf.keras.backend.clear_session()
             for r in range(4):
@@ -356,6 +356,6 @@ if __name__ == "__main__":
 
     #find_best_bpe_config()
     #analyse_bpe_config_report("bpe_loss.csv")
-    #batch_find_best_bpe(TRAIN_LEVELS, TEST_LEVELS)
-    find_best_ohe_optimizer()
-    analyse_best_config_report("ohe_opt.csv")
+    batch_find_best_bpe(TRAIN_LEVELS, TEST_LEVELS)
+    #find_best_ohe_optimizer()
+    #analyse_best_config_report("ohe_opt.csv")
