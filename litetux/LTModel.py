@@ -15,7 +15,8 @@ class LTModel:
         self.input_size = 0
         #self.create_model()
 
-    def create_model(self, in_lay=108, hidden=54, encode=27, noise=False):
+    def create_model(self, in_lay=108, hidden=54, encode=27, noise=False,
+                     optimizer='adadelta', loss='binary_crossentropy'):
         self.input_size = in_lay
         self.model_input = Input(shape=(in_lay,))
         """
@@ -31,7 +32,7 @@ class LTModel:
         self.model = Model(self.model_input, self.model_layers)
         self.model.summary()
         #self.model.compile(optimizer='adadelta', loss='binary_crossentropy')
-        self.model.compile(optimizer='adadelta', loss='mean_squared_error')
+        self.model.compile(optimizer=optimizer, loss=loss)
         return self.model
 
     def train_model(self, training_set, epoch, verbose=0):

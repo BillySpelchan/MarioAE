@@ -74,13 +74,25 @@ class MapTest:
 # noinspection PyRedundantParentheses
 class OneHotEncoder:
     def __init__(self, slice_cols, slice_rows, hidden=.5, encoded=.25):
+        """
+        :param slice_cols:
+        :param slice_rows:
+        :param hidden: % size of hidden layer (.5 = 50%) or absolute size if > 1
+        :param encoded: % size of hidden layer (.5 = 50%) or absolute size if > 1
+        """
         self.tile_bits = 16
         self.rows = slice_rows
         self.cols = slice_cols
         self.model = LTModel.LTModel()
         self.in_nodes = slice_cols * slice_rows * self.tile_bits
-        h_nodes = math.floor(self.in_nodes * hidden)
-        e_nodes = math.floor(self.in_nodes * encoded)
+        if hidden > 1:
+            h_nodes = hidden
+        else:
+            h_nodes = math.floor(self.in_nodes * hidden)
+        if encoded > 1:
+            e_nodes = encoded
+        else:
+            e_nodes = math.floor(self.in_nodes * encoded)
         self.model.create_model(self.in_nodes, h_nodes, e_nodes)
 
     def encode_slice(self, lt_map, start_col):
@@ -129,16 +141,22 @@ class OneHotEncoder:
 
 
 class BitplainEncoder(OneHotEncoder):
-    def __init__(self, slice_cols, slice_rows, hidden=.5, encoded=.25):
+    def __init__(self, slice_cols, slice_rows, hidden=.5, encoded=.25, optimizer='adam', loss='mean_squared_error'):
         super().__init__(slice_cols, slice_rows, hidden, encoded)
         self.tile_bitplains=4
         self.rows = slice_rows
         self.cols = slice_cols
         self.model = LTModel.LTModel()
         self.in_nodes = slice_cols * slice_rows * self.tile_bitplains
-        h_nodes = math.floor(self.in_nodes * hidden)
-        e_nodes = math.floor(self.in_nodes * encoded)
-        self.model.create_model(self.in_nodes, h_nodes, e_nodes)
+        if hidden > 1:
+            h_nodes = hidden
+        else:
+            h_nodes = math.floor(self.in_nodes * hidden)
+        if encoded > 1:
+            e_nodes = encoded
+        else:
+            e_nodes = math.floor(self.in_nodes * encoded)
+        self.model.create_model(self.in_nodes, h_nodes, e_nodes, optimizer=optimizer, loss=loss)
         pass
 
     def encode_slice(self, lt_map, start_col):
@@ -241,6 +259,64 @@ def batch_find_best(train, test):
                 bpe = BitplainEncoder(4, 14, h/10, e/10)
                 test_model(TRAIN_LEVELS, TEST_LEVELS, bpe, "fullTile.csv", "BitPlain"+settings, ep)
 
+def find_best_bpe_config():
+    #opts = ["poisson", "mean_squared_error","mean_absolute_error", "mean_squared_logarithmic_error", "cosine_similarity",
+    opts = [ "hinge", "squared_hinge", "categorical_hinge"]
+    for op in opts:
+        for i in range(10):
+            bpe = BitplainEncoder(4, 14, optimizer="adam", loss=op)
+            test_model(TRAIN_LEVELS, TEST_LEVELS, bpe, "bpe_loss.csv", op + str(i))
+
+def batch_find_best_bpe(train, test):
+    for h in range(112, 168, 1):
+        for e in range(25, 75, 1):
+            for r in range(4):
+                print("model size ", h, e)
+                settings = str(h)+";"+str(e)
+                bpe = BitplainEncoder(4, 14, h, e)
+                test_model(TRAIN_LEVELS, TEST_LEVELS, bpe, "fullTileBPE.csv", "BitPlain"+settings)
+
+def analyse_bpe_config_report(filename):
+    results = {}
+    with open(filename, 'r') as csv:
+        for line in csv:
+            data = line.split(',')
+            # gen, time, lvl,epoch,erors,pct_hamming,pct_tile
+            if len(data) > 3:
+                optimizer = data[0][:-1]
+                time = float(data[1])
+                level = data[2]
+                errors = int(data[4])
+                # find records for optimizer and update time/count
+                if optimizer in results:
+                    r = results[optimizer]
+                else:
+                    r = {"count":0, "time":0.0 }
+                    results[optimizer] = r
+                r["count"] += 1
+                r["time"] += time
+
+                # update stats for level results
+                if level in r:
+                    stats = r[level]
+                else:
+                    stats = {"count":0, "errors":0, "best":9999999, "worst":0}
+                    r[level] = stats
+                stats["count"] += 1
+                stats["errors"] += errors
+                if errors < stats["best"]:
+                    stats["best"] = errors
+                if errors > stats["worst"]:
+                    stats["worst"] = errors
+    for k in results:
+        r = results[k]
+        print(k,r["time"]/r["count"],end=',')
+        for name in TEST_LEVELS:
+            stats = r[name]
+            s = str(stats["best"])+','+str(stats["worst"])+','+str(stats["errors"]/stats["count"])+','
+            print(s,end=' ')
+        print()
+
 if __name__ == "__main__":
     TRAIN_LEVELS = ["levels/mario-1-1.json",
                   "levels/mario-2-1.json","levels/mario-3-1.json",
@@ -251,6 +327,10 @@ if __name__ == "__main__":
 
     #ohe = OneHotEncoder(4, 14)
     #test_model(TRAIN_LEVELS, TEST_LEVELS, ohe)
-    bpe = BitplainEncoder(4, 14)
-    test_model(TRAIN_LEVELS, TEST_LEVELS, bpe, "fullTile.csv")
-#    batch_find_best(TRAIN_LEVELS, TEST_LEVELS)
+    #bpe = BitplainEncoder(4, 14)
+    #test_model(TRAIN_LEVELS, TEST_LEVELS, bpe, "fullTile.csv")
+    #    batch_find_best(TRAIN_LEVELS, TEST_LEVELS)
+
+    #find_best_bpe_config()
+    #analyse_bpe_config_report("bpe_loss.csv")
+    batch_find_best_bpe(TRAIN_LEVELS, TEST_LEVELS)
