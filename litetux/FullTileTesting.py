@@ -1,3 +1,5 @@
+import random
+
 import numpy as np
 import tensorflow as tf
 from litetux import LTModel, LTMap
@@ -299,6 +301,15 @@ def find_best_ohe_loss(optimizer="adadelta"):
             test_model(TRAIN_LEVELS, TEST_LEVELS, ohe, "ohe_loss.csv", op + str(i))
 
 
+def generate_ohe_test_forest(count, optimizer="adamax", loss="cosine_similarity"):
+    for m in range(count):
+        tf.keras.backend.clear_session()
+        el = random.randrange(56, 448)
+        hl = random.randrange(el, 840)
+        ohe = OneHotEncoder(4, 14, hl, el, optimizer, loss)
+        test_model(TRAIN_LEVELS, TEST_LEVELS, ohe, "ohe_test_forest.csv", "ohe_"+str(hl)+"_"+str(el))
+        print("finished trial ", m)
+
 def analyse_best_config_report(filename):
     results = {}
     with open(filename, 'r') as csv:
@@ -357,5 +368,8 @@ if __name__ == "__main__":
     #find_best_bpe_config()
     #analyse_bpe_config_report("bpe_loss.csv")
     #batch_find_best_bpe(TRAIN_LEVELS, TEST_LEVELS)
-    find_best_ohe_optimizer()
-    analyse_best_config_report("ohe_opt.csv")
+    #find_best_ohe_optimizer()
+    #analyse_best_config_report("ohe_opt.csv")
+    #find_best_ohe_loss("adamax")
+    #analyse_best_config_report("ohe_loss.csv")
+    generate_ohe_test_forest(100)
