@@ -351,25 +351,80 @@ def analyse_best_config_report(filename):
             print(s,end=' ')
         print()
 
-if __name__ == "__main__":
-    TRAIN_LEVELS = ["levels/mario-1-1.json",
-                  "levels/mario-2-1.json","levels/mario-3-1.json",
-                  "levels/mario-4-1.json","levels/mario-4-2.json","levels/mario-5-1.json",
-                  "levels/mario-6-1.json","levels/mario-6-2.json",
-                  "levels/mario-7-1.json","levels/mario-8-1.json"]
-    TEST_LEVELS = ["levels/mario-1-2.json", "levels/mario-3-3.json", "levels/mario-6-1.json"]
 
-    #ohe = OneHotEncoder(4, 14)
-    #test_model(TRAIN_LEVELS, TEST_LEVELS, ohe)
-    #bpe = BitplainEncoder(4, 14)
-    #test_model(TRAIN_LEVELS, TEST_LEVELS, bpe, "fullTile.csv")
+def analyse_test_forest_encoder(source_csv_filename, report_csv_filename,
+                                start_range=0, end_range=1000, bucket_size=1):
+    num_buckets = int((end_range - start_range + 1) / bucket_size)
+    print("allocating ", num_buckets, " buckets")
+    buckets = []
+    for i in range(num_buckets):
+        buckets.append([{"best": 999999, "worst": 0, "sum": 0, "count": 0},
+                        {"best": 999999, "worst": 0, "sum": 0, "count": 0},
+                        {"best": 999999, "worst": 0, "sum": 0, "count": 0}])
+    print("buckets allocated")
+    with open(source_csv_filename, 'r') as file:
+        for line in file:
+            data = line.split(',')
+            # gen, time, lvl,epoch,erors,pct_hamming,pct_tile
+            shape = data[0].split('_')
+            encoder = int(shape[2])
+            encoder_bucket = (encoder - start_range) // bucket_size
+            try:
+                test_id = TEST_LEVELS.index(data[2])
+            except:
+                test_id = -1
+            if encoder_bucket >= 0 and encoder_bucket < num_buckets and test_id >= 0:
+                errors = int(data[4])
+                stats = buckets[encoder_bucket][test_id]
+                stats["count"] += 1
+                stats["sum"] += errors
+                if errors < stats["best"]:
+                    stats["best"] = errors
+                if errors > stats["worst"]:
+                    stats["worst"] = errors
+
+    # todo open file and write report to it
+    print("start_nodes, end_nodes, l1_best, l1_worst, l1_average, l2_best, l2_worst, l2_average, "
+          "l3_best, l3_worst, l3_average")
+    s = ""
+    for bucket_id in range(num_buckets):
+        s += str(bucket_id * bucket_size + start_range) + ','
+        s += str((bucket_id+1) * bucket_size + start_range - 1) + ','
+        for i in range(len(TEST_LEVELS)):
+            stats = buckets[bucket_id][i]
+            s += str(stats["best"]) + ',' + str(stats["worst"]) + ','
+            if (stats["count"] > 0 ):
+                s += str(stats["sum"] / stats["count"]) + ','
+            else:
+                s += "0,"
+        s += "\n"
+    print(s)
+
+
+
+TRAIN_LEVELS = ["levels/mario-1-1.json",
+                "levels/mario-2-1.json","levels/mario-3-1.json",
+                "levels/mario-4-1.json","levels/mario-4-2.json", "levels/mario-5-1.json",
+                "levels/mario-6-1.json","levels/mario-6-2.json",
+                "levels/mario-7-1.json","levels/mario-8-1.json"]
+TEST_LEVELS = ["levels/mario-1-2.json", "levels/mario-3-3.json", "levels/mario-6-1.json"]
+
+if __name__ == "__main__":
+
+    # ohe = OneHotEncoder(4, 14)
+    # test_model(TRAIN_LEVELS, TEST_LEVELS, ohe)
+    # bpe = BitplainEncoder(4, 14)
+    # test_model(TRAIN_LEVELS, TEST_LEVELS, bpe, "fullTile.csv")
     #    batch_find_best(TRAIN_LEVELS, TEST_LEVELS)
 
-    #find_best_bpe_config()
-    #analyse_bpe_config_report("bpe_loss.csv")
-    #batch_find_best_bpe(TRAIN_LEVELS, TEST_LEVELS)
-    #find_best_ohe_optimizer()
-    #analyse_best_config_report("ohe_opt.csv")
-    #find_best_ohe_loss("adamax")
-    #analyse_best_config_report("ohe_loss.csv")
+    # find_best_bpe_config()
+    # analyse_bpe_config_report("bpe_loss.csv")
+    # batch_find_best_bpe(TRAIN_LEVELS, TEST_LEVELS)
+    # find_best_ohe_optimizer()
+    # analyse_best_config_report("ohe_opt.csv")
+    # find_best_ohe_loss("adamax")
+    # analyse_best_config_report("ohe_loss.csv")
     generate_ohe_test_forest(100)
+    print("calling analyse test forest encoder")
+    analyse_test_forest_encoder("ohe_test_forest.csv", "ohe_encoder_size_performance.csv",
+                                56, 448, 40)
