@@ -277,9 +277,9 @@ def batch_find_best_bpe(train, test):
             tf.keras.backend.clear_session()
             for r in range(4):
                 print("model size ", h, e)
-                settings = str(h)+";"+str(e)
+                settings = str(h)+"_"+str(e)
                 bpe = BitplainEncoder(4, 14, h, e)
-                test_model(TRAIN_LEVELS, TEST_LEVELS, bpe, "fullTileBPE.csv", "BitPlain"+settings)
+                test_model(TRAIN_LEVELS, TEST_LEVELS, bpe, "fullTileBPE.csv", "BitPlain_"+settings)
 
 
 def find_best_ohe_optimizer(loss="mean_squared_error"):
@@ -383,10 +383,8 @@ def analyse_test_forest_encoder(source_csv_filename, report_csv_filename,
                 if errors > stats["worst"]:
                     stats["worst"] = errors
 
-    # todo open file and write report to it
-    print("start_nodes, end_nodes, l1_best, l1_worst, l1_average, l2_best, l2_worst, l2_average, "
-          "l3_best, l3_worst, l3_average")
-    s = ""
+    s = "start_nodes, end_nodes, l1_best, l1_worst, l1_average, l2_best, l2_worst, l2_average, "
+    s +="l3_best, l3_worst, l3_average\n"
     for bucket_id in range(num_buckets):
         s += str(bucket_id * bucket_size + start_range) + ','
         s += str((bucket_id+1) * bucket_size + start_range - 1) + ','
@@ -399,7 +397,8 @@ def analyse_test_forest_encoder(source_csv_filename, report_csv_filename,
                 s += "0,"
         s += "\n"
     print(s)
-
+    with open(report_csv_filename, 'w') as file:
+        file.write(s)
 
 
 TRAIN_LEVELS = ["levels/mario-1-1.json",
@@ -424,7 +423,9 @@ if __name__ == "__main__":
     # analyse_best_config_report("ohe_opt.csv")
     # find_best_ohe_loss("adamax")
     # analyse_best_config_report("ohe_loss.csv")
+    analyse_test_forest_encoder("fullTileBPE.csv", "bpe_encoder_size_performance.csv",
+                                25, 75, 1)
     generate_ohe_test_forest(100)
     print("calling analyse test forest encoder")
     analyse_test_forest_encoder("ohe_test_forest.csv", "ohe_encoder_size_performance.csv",
-                                56, 448, 40)
+                                56, 448, 10)
