@@ -649,3 +649,8 @@ if __name__ == "__main__":
     print(enter_map[0,:,100])
     print(enter_map[1,:,100])
     """
+    extractor = BestReachableAsFloatExtractor(ltm, sm, 0, 11)
+    enter_map = extractor.perform_extraction()
+    print(extractor.enter_map_to_string())
+    print(enter_map.shape)
+    print(enter_map[0:,137:141])

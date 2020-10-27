@@ -75,9 +75,9 @@ def write_test_results(hidden_pct, encoded_pct, ohe_batch, bpe_batch, verbose=Tr
             s += str(ohe_batch[i]["test_time"]) + "," + str(bpe_batch[i]["test_time"]) + "\n"
             total_test_time_ohe += ohe_batch[i]["test_time"]
             total_test_time_bpe += bpe_batch[i]["test_time"]
-        f.write(s)
-        if verbose:
-            print(s)
+            f.write(s)
+            if verbose:
+                print(s)
 
     with open("oheVbpe.csv", "a") as f:
         s = str(hidden_pct) + "," + str(encoded_pct) + ","
@@ -86,8 +86,8 @@ def write_test_results(hidden_pct, encoded_pct, ohe_batch, bpe_batch, verbose=Tr
         for t in range(num_tests):
             s += str(best_ohe[t] / tiles[t]) + "," + str(best_bpe[t] / tiles[t]) + ","
             s += str(worst_ohe[t] / tiles[t]) + "," + str(worst_bpe[t] / tiles[t]) + ","
-            s += str(total_errors_ohe[t] / num_tests / tiles[t]) + ","
-            s += str(total_errors_bpe[t] / num_tests / tiles[t]) + ","
+            s += str(total_errors_ohe[t] / num_trials / tiles[t]) + ","
+            s += str(total_errors_bpe[t] / num_trials / tiles[t]) + ","
         s += str(total_test_time_ohe / num_trials) + "," + str(total_test_time_bpe / num_trials) + "\n"
         f.write(s)
         if verbose:
@@ -95,6 +95,15 @@ def write_test_results(hidden_pct, encoded_pct, ohe_batch, bpe_batch, verbose=Tr
 
 
 def perform_comparison_tests():
+    with open("oheVbpe_raw.csv", 'w') as f:
+        f.write("hidden,encoding,OHE Train,BPE TRain,OHE Err1C,BPE ErrlC,OHE Err1,BPE Errl,OHE Err2C,BPE Err2C,OHE Err2,BPE Err2,OHE Err3C,BPE Err3C,OHE Err3,BPE Err3,na,na")
+    with open("oheVbpe.csv", 'w') as f:
+        f.write("hidden,Encoding,Time OHE,Time BPE,")
+        f.write("OHE Best 1,BPE Best 1,OHE Worst 1, BPE Worst 1, OHE Avg. 1, BPE Avg. 1,")
+        f.write("OHE Best 2,BPE Best 2,OHE Worst 2, BPE Worst 2, OHE Avg. 2, BPE Avg. 2,")
+        f.write("OHE Best 3,BPE Best 3,OHE Worst 3, BPE Worst 3, OHE Avg. 3, BPE Avg. 3,")
+        f.write("OHE TA,BPE TA\n")
+
     for e in range(1, 6):
         for h in range(e+1, 9):
             tf.keras.backend.clear_session()
