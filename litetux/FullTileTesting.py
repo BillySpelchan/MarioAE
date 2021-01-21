@@ -423,9 +423,15 @@ if __name__ == "__main__":
     # analyse_best_config_report("ohe_opt.csv")
     # find_best_ohe_loss("adamax")
     # analyse_best_config_report("ohe_loss.csv")
-    analyse_test_forest_encoder("fullTileBPE.csv", "bpe_encoder_size_performance.csv",
-                                25, 75, 1)
-    generate_ohe_test_forest(100)
-    print("calling analyse test forest encoder")
-    analyse_test_forest_encoder("ohe_test_forest.csv", "ohe_encoder_size_performance.csv",
-                                56, 448, 10)
+    # analyse_test_forest_encoder("fullTileBPE.csv", "bpe_encoder_size_performance.csv",
+    #                            25, 75, 1)
+    # generate_ohe_test_forest(100)
+    # print("calling analyse test forest encoder")
+    # analyse_test_forest_encoder("ohe_test_forest.csv", "ohe_encoder_size_performance.csv",
+    #                            56, 448, 10)
+    print("creating bpe")
+    bpe = BitplainEncoder(4, 14)
+    print("training")
+    test_model(TRAIN_LEVELS, TEST_LEVELS, bpe)
+    print("saving bpe")
+    bpe.model.save()

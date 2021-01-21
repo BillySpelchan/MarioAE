@@ -45,7 +45,7 @@ class LTMapGenerator():
         clean_in = self.cleaner.build_slice_set(training_levels)
         self.cleaner.train(clean_in, epoch=epochs)
 
-    def build_map(self, cols, noise = .1, clean = True):
+    def build_map(self, cols, noise=0.1, clean=True):
         # TODO handle None start slice
         predicted_map = LTMap.LiteTuxMap(cols, self.model.rows)
         prediction = self.model.predict(self.start_slice)
@@ -61,6 +61,8 @@ class LTMapGenerator():
             self.model.decode_slice(prediction[0], predicted_map, cur_col)
             cur_col += self.cols_in_slice
         print(predicted_map.to_vertical_string())
+        return predicted_map
+
 
 TRAIN_LEVELS = ["levels/mario-1-1.json",
               "levels/mario-2-1.json","levels/mario-3-1.json",
@@ -73,6 +75,15 @@ EXTRACTORS = [None, LTMap.BasicExtractor, LTMap.BestReachableAsBitsExtractor,
               LTMap.LastInColumnPathExtractor, LTMap.BestReachableAsFloatExtractor,
               LTMap.PathExtractor, LTMap.PathExtractorWithJumpState]
 
-gen = LTMapGenerator()
-gen.train_models(TRAIN_LEVELS, 4)
-gen.build_map(80, .1, False)
+if __name__ == "__main__":
+    size = input("Map size: ")
+    noise = input("Noise (0-1.0): ")
+    cleanStr = input("Clean (Y/N): ")
+    clean = True if cleanStr.startswith("y") or cleanStr.startswith("Y") else False
+    gen = LTMapGenerator()
+    gen.train_models(TRAIN_LEVELS)
+    level = gen.build_map(int(size), float(noise), clean)
+    should_save = input("Save map? ")
+    if should_save.startswith("y") or should_save.startswith("Y"):
+        filename = input("filename: ")
+        level.save(filename)
