@@ -142,6 +142,9 @@ class OneHotEncoder:
     def predict(self, slc):
         return self.model.predict_slice(slc)
 
+    def save(self, filename = "ohemodel.h5"):
+        self.model.save(filename);
+
 
 class BitplainEncoder(OneHotEncoder):
     def __init__(self, slice_cols, slice_rows, hidden=.5, encoded=.25, optimizer='adam', loss='mean_squared_error'):
@@ -188,6 +191,8 @@ class BitplainEncoder(OneHotEncoder):
                     slc_offset += 1
                 target_map.set_tile(c+start_col, r, t)
 
+    def save(self, filename="bpemodel.h5"):
+        self.model.save(filename)
 
 SMALL_TEST_MAP = "{\"width\":4, \"height\":4, \"_mapData\":[[0,1,2,3],[4,5,6,7],[8,9,10,11],[12,13,14,15]]}"
 

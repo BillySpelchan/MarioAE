@@ -61,12 +61,22 @@ class LTMapGenerator():
             self.model.decode_slice(prediction[0], predicted_map, cur_col)
             cur_col += self.cols_in_slice
         print(predicted_map.to_vertical_string())
+        return predicted_map;
 
+"""
 TRAIN_LEVELS = ["levels/mario-1-1.json",
               "levels/mario-2-1.json","levels/mario-3-1.json",
               "levels/mario-4-1.json","levels/mario-4-2.json","levels/mario-5-1.json",
               "levels/mario-6-1.json","levels/mario-6-2.json",
               "levels/mario-7-1.json","levels/mario-8-1.json"]
+TRAIN_LEVELS = ["levels/mario-1-1.json", "levels/mario-2-1.json",
+                "levels/mario-5-1.json", "levels/mario-6-1.json",
+                "levels/mario-6-2.json", "levels/mario-7-1.json"]
+"""
+TRAIN_LEVELS = ["levels/lt-1.json", "levels/lt-2.json", "levels/lt-3.json",
+                "levels/mario-1-1.json", "levels/mario-2-1.json",
+                "levels/mario-5-1.json",
+                ]
 TEST_LEVELS = ["levels/mario-1-2.json", "levels/mario-3-3.json", "levels/mario-6-1.json"]
 
 EXTRACTORS = [None, LTMap.BasicExtractor, LTMap.BestReachableAsBitsExtractor,
@@ -74,5 +84,8 @@ EXTRACTORS = [None, LTMap.BasicExtractor, LTMap.BestReachableAsBitsExtractor,
               LTMap.PathExtractor, LTMap.PathExtractorWithJumpState]
 
 gen = LTMapGenerator()
-gen.train_models(TRAIN_LEVELS, 4)
-gen.build_map(80, .1, False)
+gen.train_models(TRAIN_LEVELS, 250)
+gen.model.save()
+gen.cleaner.save("bpecleaner")
+lvl = gen.build_map(100, .1, False)
+lvl.save("test.json")
