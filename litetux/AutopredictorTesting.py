@@ -190,8 +190,8 @@ def batch_find_best_predictor(train, test):
                 test_model(FullTileTesting.TRAIN_LEVELS, FullTileTesting.TEST_LEVELS, bpe, "fullTilePrediction.csv", "BitPlain"+settings, ep)
 
 if __name__ == "__main__":
-    #find_best_bpe_predictor_optimizer()
-    #FullTileTesting.analyse_best_config_report("predict_bpe_opt.csv") #Adadelta best
+    find_best_bpe_predictor_optimizer()
+    FullTileTesting.analyse_best_config_report("predict_bpe_opt.csv") #Adadelta best
     #find_best_bpe_predictor_loss()
     #FullTileTesting.analyse_best_config_report("bpe_predictor_loss.csv")#mean_squared_log
     #find_best_ohe_predictor_optimizer()
@@ -199,4 +199,4 @@ if __name__ == "__main__":
     #find_best_ohe_predictor_loss()
     #FullTileTesting.analyse_best_config_report("ohe_predictor_loss.csv")#mean_absolute_error
     #batch_find_best_predictor(FullTileTesting.TRAIN_LEVELS, FullTileTesting.TEST_LEVELS)
-    perform_predictor_comparison_tests()
+    #perform_predictor_comparison_tests()
