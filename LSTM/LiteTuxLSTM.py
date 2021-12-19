@@ -135,15 +135,16 @@ if os.path.isfile("ohe_lstm.h5"):
     model = keras.models.load_model("ohe_lstm.h5")
     test.model = model
 else :
-    x, y = test.load_map_file_as_training_set("../litetux/levels/mario1-1.json")
-    model.fit(x,y,epochs=50,batch_size=1)
+    x, y = test.load_map_file_as_training_set("../litetux/levels/lt-2.json")
+    model.fit(x,y,epochs=200,batch_size=1)
     model.save("ohe_lstm.h5")
     test.log("saved model")
 test_map = LTMap.LiteTuxMap()
-test_map.load("../litetux/levels/mario1-1.json")
+test_map.load("../litetux/levels/lt-1.json")
 #pred_map = test.predict_map(test_map)
-pred_map = test.generate_map(150,test_map)
+pred_map = test.generate_map(100,test_map)
 print(pred_map.to_vertical_string())
+pred_map.save("test.json")
 
 '''    
 for slc in range(x.shape[0]):
